@@ -1,0 +1,874 @@
+<title>Counterpart — Adversarial Chat Defense Range</title>
+<style>
+  :root{
+    --ink:#0D141C; --panel:#141F2B; --panel-2:#0F1925; --raise:#1B2A3A;
+    --line:#243546; --line-soft:#1C2A38;
+    --text:#E6EDF3; --muted:#93A4B3; --faint:#63788A;
+    --teal:#2DD4BF; --teal-deep:#14B8A6; --teal-ink:#062B27;
+    --amber:#F6A82C; --red:#E5484D; --red-deep:#B4262B;
+    --good:#3DD68C;
+    --shadow:0 10px 40px rgba(0,0,0,.45);
+    --mono:"Cascadia Code","Cascadia Mono",Consolas,"SF Mono",ui-monospace,"Roboto Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --ink:#EDF1F0; --panel:#FFFFFF; --panel-2:#F3F6F6; --raise:#FFFFFF;
+      --line:#D3DCDD; --line-soft:#E3E9E9;
+      --text:#0E1B22; --muted:#4B5E67; --faint:#7C8E96;
+      --teal:#0E9E8E; --teal-deep:#0B8578; --teal-ink:#DDF6F2;
+      --amber:#C6790B; --red:#CE3138; --red-deep:#A21F25;
+      --good:#129A5E;
+      --shadow:0 10px 30px rgba(20,40,50,.12);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#0D141C; --panel:#141F2B; --panel-2:#0F1925; --raise:#1B2A3A;
+    --line:#243546; --line-soft:#1C2A38; --text:#E6EDF3; --muted:#93A4B3; --faint:#63788A;
+    --teal:#2DD4BF; --teal-deep:#14B8A6; --teal-ink:#062B27;
+    --amber:#F6A82C; --red:#E5484D; --red-deep:#B4262B; --good:#3DD68C;
+    --shadow:0 10px 40px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"]{
+    --ink:#EDF1F0; --panel:#FFFFFF; --panel-2:#F3F6F6; --raise:#FFFFFF;
+    --line:#D3DCDD; --line-soft:#E3E9E9; --text:#0E1B22; --muted:#4B5E67; --faint:#7C8E96;
+    --teal:#0E9E8E; --teal-deep:#0B8578; --teal-ink:#DDF6F2;
+    --amber:#C6790B; --red:#CE3138; --red-deep:#A21F25; --good:#129A5E;
+    --shadow:0 10px 30px rgba(20,40,50,.12);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--ink); color:var(--text); font-family:var(--sans);
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:var(--mono)}
+  .tag{
+    font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--faint);
+  }
+  button{font-family:inherit}
+  ::selection{background:rgba(45,212,191,.28)}
+
+  /* ---------- shell ---------- */
+  .app{
+    display:grid; grid-template-rows:auto 1fr; height:100dvh; max-width:1280px; margin:0 auto;
+    border-left:1px solid var(--line-soft); border-right:1px solid var(--line-soft);
+  }
+  header.bar{
+    display:flex; align-items:center; gap:18px; padding:12px 18px;
+    border-bottom:1px solid var(--line); background:var(--panel-2);
+  }
+  .brand{display:flex; align-items:center; gap:11px; min-width:0}
+  .glyph{
+    width:30px;height:30px;border-radius:8px;flex:0 0 auto;
+    background:
+      radial-gradient(circle at 32% 30%, var(--teal) 0 22%, transparent 23%),
+      linear-gradient(135deg, var(--raise), var(--panel));
+    border:1px solid var(--line); position:relative;
+  }
+  .glyph::after{content:"";position:absolute;inset:8px 8px auto auto;width:8px;height:8px;border-radius:50%;
+    box-shadow:0 0 0 2px var(--panel-2), 0 0 0 3px var(--red); top:7px; right:7px}
+  .brand h1{font-size:15px;margin:0;letter-spacing:.02em;font-weight:700;white-space:nowrap}
+  .brand h1 span{color:var(--teal)}
+  .brand .sub{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar .spacer{flex:1}
+  .scoreboard{display:flex; align-items:center; gap:18px}
+  .metric{display:flex;flex-direction:column;gap:3px;min-width:96px}
+  .metric .k{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .metric .v{font-family:var(--mono);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+  .meter{height:6px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:5px;width:120px}
+  .meter > i{display:block;height:100%;width:0%;border-radius:6px;
+    background:linear-gradient(90deg,var(--good),var(--amber) 55%,var(--red));
+    transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  .iconbtn{
+    background:var(--panel);border:1px solid var(--line);color:var(--muted);
+    width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:15px;display:grid;place-items:center;
+  }
+  .iconbtn:hover{color:var(--text);border-color:var(--teal-deep)}
+
+  /* ---------- workspace ---------- */
+  .work{display:grid; grid-template-columns:1fr 348px; min-height:0}
+  @media (max-width:900px){ .work{grid-template-columns:1fr} }
+
+  .chatwrap{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--line)}
+  .personas{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--line-soft);background:var(--panel-2);flex-wrap:wrap}
+  .persona{
+    display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid transparent;border-bottom:none;
+    border-radius:9px 9px 0 0;cursor:pointer;color:var(--muted);font-size:13px;background:transparent
+  }
+  .persona .av{width:20px;height:20px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-size:11px;
+    background:var(--raise);border:1px solid var(--line);color:var(--text)}
+  .persona.active{background:var(--panel);border-color:var(--line);color:var(--text);position:relative;top:1px}
+  .persona .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);display:none}
+  .persona.hasnew .dot{display:block}
+
+  .stream{flex:1;overflow-y:auto;padding:20px 20px 8px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+  .daybreak{align-self:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);background:var(--panel-2);border:1px solid var(--line-soft);padding:4px 12px;border-radius:20px}
+  .msg{max-width:78%;display:flex;flex-direction:column;gap:4px;animation:rise .35s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .msg .who{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--faint);padding:0 4px}
+  .bubble{padding:11px 14px;border-radius:14px;font-size:14.5px;position:relative;white-space:pre-wrap;word-wrap:break-word}
+  .msg.them{align-self:flex-start}
+  .msg.them .bubble{background:var(--panel);border:1px solid var(--line);border-top-left-radius:5px;color:var(--text)}
+  .msg.you{align-self:flex-end;align-items:flex-end}
+  .msg.you .bubble{background:linear-gradient(160deg,var(--teal-deep),var(--teal));color:#04231f;border-top-right-radius:5px;font-weight:500}
+  :root[data-theme="light"] .msg.you .bubble,
+  @media (prefers-color-scheme: light){ .msg.you .bubble{color:#04231f} }
+  .msg.system{align-self:center;max-width:92%}
+  .msg.system .bubble{background:transparent;border:1px dashed var(--line);color:var(--muted);font-size:13px;border-radius:12px}
+  .typing .bubble{display:inline-flex;gap:4px;align-items:center;padding:14px}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--faint);animation:blink 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+  .composer{border-top:1px solid var(--line);padding:12px 14px;background:var(--panel-2);display:flex;flex-direction:column;gap:10px}
+  .suggests{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    font-size:12.5px;padding:7px 11px;border-radius:20px;border:1px solid var(--line);
+    background:var(--panel);color:var(--muted);cursor:pointer;text-align:left
+  }
+  .chip:hover{border-color:var(--teal-deep);color:var(--text)}
+  .chip .lead{font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:.05em;display:block}
+  .inputrow{display:flex;gap:10px;align-items:flex-end}
+  textarea#reply{
+    flex:1;resize:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    color:var(--text);font-family:inherit;font-size:14.5px;padding:11px 13px;line-height:1.45;max-height:140px;min-height:46px
+  }
+  textarea#reply:focus{outline:none;border-color:var(--teal-deep);box-shadow:0 0 0 3px rgba(45,212,191,.15)}
+  textarea#reply:disabled{opacity:.5}
+  .send{
+    background:var(--teal);color:#04231f;border:none;border-radius:12px;padding:0 18px;height:46px;
+    font-weight:700;cursor:pointer;font-size:14px;flex:0 0 auto;letter-spacing:.02em
+  }
+  .send:hover{background:var(--teal-deep)}
+  .send:disabled{opacity:.4;cursor:default}
+  .hintbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:12px;height:46px;padding:0 14px;cursor:pointer;font-size:13px;flex:0 0 auto}
+  .hintbtn:hover{color:var(--text);border-color:var(--amber)}
+
+  /* ---------- console rail ---------- */
+  .rail{background:var(--panel-2);overflow-y:auto;display:flex;flex-direction:column}
+  @media (max-width:900px){ .rail{border-top:1px solid var(--line)} }
+  .card{border-bottom:1px solid var(--line-soft);padding:15px 16px}
+  .card h3{margin:0 0 10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
+    display:flex;align-items:center;gap:8px}
+  .card h3 .pip{width:6px;height:6px;border-radius:50%;background:var(--teal)}
+  .tactic{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px;min-height:52px}
+  .tactic.empty{color:var(--faint);font-size:13px}
+  .tactic .name{font-weight:600;font-size:14px;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+  .tactic .badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:20px;border:1px solid}
+  .b-crit{color:var(--red);border-color:var(--red)}.b-high{color:var(--amber);border-color:var(--amber)}
+  .b-med{color:var(--teal);border-color:var(--teal-deep)}.b-info{color:var(--faint);border-color:var(--line)}
+  .tactic .desc{font-size:12.5px;color:var(--muted)}
+
+  .coach{border-radius:11px;padding:12px;font-size:13px;border:1px solid var(--line);background:var(--panel)}
+  .coach.good{border-color:color-mix(in srgb,var(--good) 55%, var(--line));background:color-mix(in srgb,var(--good) 8%, var(--panel))}
+  .coach.bad{border-color:color-mix(in srgb,var(--red) 55%, var(--line));background:color-mix(in srgb,var(--red) 8%, var(--panel))}
+  .coach.warn{border-color:color-mix(in srgb,var(--amber) 55%, var(--line));background:color-mix(in srgb,var(--amber) 9%, var(--panel))}
+  .coach .verdict{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;display:flex;gap:8px;align-items:center}
+  .coach.good .verdict{color:var(--good)}.coach.bad .verdict{color:var(--red)}.coach.warn .verdict{color:var(--amber)}
+  .coach .verdict b{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  .frag{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line-soft)}
+  .frag:last-child{border-bottom:none}
+  .frag .sev{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+  .frag .lbl{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.03em;flex:0 0 auto;min-width:112px;text-transform:uppercase}
+  .frag .val{font-size:13px;color:var(--text);word-break:break-word}
+  .frag-empty{color:var(--faint);font-size:13px}
+
+  .synth{background:var(--panel);border:1px solid var(--red-deep);border-radius:11px;padding:12px}
+  .synth h4{margin:0 0 8px;font-size:13px;color:var(--red);display:flex;align-items:center;gap:8px}
+  .synth ul{margin:0;padding-left:16px;font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+  .synth code{font-family:var(--mono);background:var(--panel-2);padding:1px 5px;border-radius:5px;color:var(--text);border:1px solid var(--line)}
+  .synth-empty{font-size:12.5px;color:var(--faint)}
+
+  /* ---------- overlays ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(6,11,16,.72);backdrop-filter:blur(3px);display:grid;place-items:center;padding:22px;z-index:40}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);max-width:760px;width:100%;max-height:92dvh;overflow-y:auto}
+  .modal-head{padding:22px 26px 6px}
+  .modal-head .kick{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+  .modal-head h2{margin:6px 0 6px;font-size:24px;letter-spacing:-.01em;text-wrap:balance}
+  .modal-head p{margin:0;color:var(--muted);font-size:14px;max-width:60ch}
+  .modal-body{padding:14px 26px 24px}
+  .seclabel{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:18px 0 10px}
+
+  .scen-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:560px){.scen-grid{grid-template-columns:1fr}}
+  .scen{
+    text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:15px;cursor:pointer;
+    display:flex;flex-direction:column;gap:7px;transition:border-color .15s,transform .15s
+  }
+  .scen:hover{border-color:var(--teal-deep);transform:translateY(-2px)}
+  .scen.sel{border-color:var(--teal);box-shadow:0 0 0 2px rgba(45,212,191,.25)}
+  .scen .ico{font-size:20px}
+  .scen .t{font-weight:700;font-size:15px}
+  .scen .d{font-size:12.5px;color:var(--muted)}
+  .scen .meta{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+
+  .levels{display:flex;gap:10px;flex-wrap:wrap}
+  .lvl{flex:1;min-width:150px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;text-align:left}
+  .lvl.sel{border-color:var(--teal);box-shadow:0 0 0 2px rgba(45,212,191,.25)}
+  .lvl .t{font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+  .lvl .t .lv{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .lvl .d{font-size:12px;color:var(--muted);margin-top:3px}
+
+  .startbtn{margin-top:22px;width:100%;background:var(--teal);color:#04231f;border:none;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;letter-spacing:.02em}
+  .startbtn:hover{background:var(--teal-deep)}
+  .startbtn:disabled{opacity:.4;cursor:default}
+  .disclaimer{margin-top:14px;font-size:11.5px;color:var(--faint);border-top:1px solid var(--line-soft);padding-top:12px;line-height:1.5}
+
+  /* debrief */
+  .grade-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .grade{width:78px;height:78px;border-radius:16px;display:grid;place-items:center;font-family:var(--mono);font-size:38px;font-weight:700;flex:0 0 auto;border:2px solid}
+  .grade small{display:none}
+  .grade-stats{display:flex;gap:22px;flex-wrap:wrap}
+  .grade-stats .s .k{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .grade-stats .s .v{font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums}
+  .review{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .rev{border:1px solid var(--line);border-radius:11px;padding:12px;background:var(--panel-2)}
+  .rev .rq{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .rev .ra{font-size:13.5px;padding:8px 10px;border-radius:8px;margin-bottom:8px;background:var(--panel);border:1px solid var(--line)}
+  .rev .rv{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+  .rev.leak{border-color:color-mix(in srgb,var(--red) 45%,var(--line))}.rev.leak .rv{color:var(--red)}
+  .rev.hold{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}.rev.hold .rv{color:var(--good)}
+  .rev.soft .rv{color:var(--amber)}
+  .rev .model{font-size:12.5px;color:var(--muted)}.rev .model b{color:var(--teal)}
+  .btnrow{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+  .btnrow button{flex:1;min-width:150px;border-radius:12px;padding:13px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid var(--line)}
+  .btnrow .primary{background:var(--teal);color:#04231f;border-color:var(--teal)}
+  .btnrow .ghost{background:transparent;color:var(--text)}
+  .btnrow .ghost:hover{border-color:var(--teal-deep)}
+  .resources{margin-top:16px;font-size:12.5px;color:var(--muted);background:color-mix(in srgb,var(--teal) 7%,var(--panel-2));border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .resources b{color:var(--text)} .resources a{color:var(--teal)}
+
+  .hidden{display:none!important}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <div class="glyph" aria-hidden="true"></div>
+      <div style="min-width:0">
+        <h1>COUNTER<span>PART</span></h1>
+        <div class="sub" id="scenLabel">Adversarial chat defense range</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="scoreboard">
+      <div class="metric">
+        <span class="k">Privacy score</span>
+        <span class="v" id="privVal">100</span>
+      </div>
+      <div class="metric">
+        <span class="k">Exposure</span>
+        <div class="meter"><i id="expBar"></i></div>
+      </div>
+    </div>
+    <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    <button class="iconbtn" id="restartBtn" title="New scenario" aria-label="New scenario">⟲</button>
+  </header>
+
+  <div class="work">
+    <section class="chatwrap">
+      <div class="personas hidden" id="personas"></div>
+      <div class="stream" id="stream" aria-live="polite"></div>
+      <div class="composer">
+        <div class="suggests hidden" id="suggests"></div>
+        <div class="inputrow">
+          <textarea id="reply" rows="1" placeholder="Type your reply…" disabled></textarea>
+          <button class="hintbtn hidden" id="hintBtn">Hint</button>
+          <button class="send" id="sendBtn" disabled>Send</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="rail">
+      <div class="card">
+        <h3><span class="pip"></span>Detected tactic</h3>
+        <div class="tactic empty" id="tacticBox">Awaiting the adversary's next move…</div>
+      </div>
+      <div class="card">
+        <h3><span class="pip" style="background:var(--amber)"></span>Coach</h3>
+        <div id="coachBox" class="tactic empty">Feedback on each reply appears here.</div>
+      </div>
+      <div class="card">
+        <h3><span class="pip" style="background:var(--red)"></span>Fragments harvested</h3>
+        <div id="fragBox"><div class="frag-empty">Nothing leaked yet. Keep it that way.</div></div>
+      </div>
+      <div class="card">
+        <h3><span class="pip" style="background:var(--red)"></span>Attack synthesis</h3>
+        <div id="synthBox"><div class="synth-empty">As the adversary collects fragments, watch how they combine into an attack here.</div></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- START -->
+<div class="overlay" id="startOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="kick">Training range · nothing you type leaves this browser</div>
+      <h2>Practice the conversation, not the breach.</h2>
+      <p>Counterpart puts you in a live chat with a simulated adversary who tries to coax out personal information — directly and in fragments. Your job: keep the conversation going without handing over anything that can be pieced together, spoofed, or used against you.</p>
+    </div>
+    <div class="modal-body">
+      <div class="seclabel">1 · Choose a scenario</div>
+      <div class="scen-grid" id="scenGrid"></div>
+      <div class="seclabel">2 · Choose a difficulty</div>
+      <div class="levels" id="lvlRow"></div>
+      <button class="startbtn" id="beginBtn" disabled>Enter the range</button>
+      <p class="disclaimer" id="startDisc">This is a safety-training simulation. The adversary is scripted — it never asks for or displays explicit content, and no data is transmitted anywhere. If a real situation resembles these scenarios, especially involving a minor, stop and reach a trusted adult and the resources shown at the end of each run.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DEBRIEF -->
+<div class="overlay hidden" id="debriefOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="kick" id="dbKick">Debrief</div>
+      <h2 id="dbTitle">Run complete</h2>
+      <p id="dbLede"></p>
+    </div>
+    <div class="modal-body">
+      <div class="grade-row">
+        <div class="grade" id="dbGrade">A</div>
+        <div class="grade-stats">
+          <div class="s"><div class="k">Final score</div><div class="v" id="dbScore">100</div></div>
+          <div class="s"><div class="k">Fragments leaked</div><div class="v" id="dbLeaks">0</div></div>
+          <div class="s"><div class="k">Defenses held</div><div class="v" id="dbHolds">0</div></div>
+        </div>
+      </div>
+      <div class="seclabel">Turn-by-turn review</div>
+      <div class="review" id="dbReview"></div>
+      <div class="resources hidden" id="dbResources"></div>
+      <div class="btnrow">
+        <button class="ghost" id="dbRetry">Replay this scenario</button>
+        <button class="primary" id="dbNew">Try another scenario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+  /* ============================ helpers ============================ */
+  const $ = s => document.querySelector(s);
+  const el = (t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+  const esc = s => String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+
+  /* ============================ detectors ============================ */
+  const RX = {
+    email:/\b[\w.+-]+@[\w-]+\.[a-z]{2,}\b/i,
+    phone:/(?:\+?\d[\s().-]?){9,}\d/,
+    ssn:/\b\d{3}-\d{2}-\d{4}\b/,
+    date:/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b/,
+    monthday:/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(st|nd|rd|th)?\b/i,
+    year:/\b(19|20)\d{2}\b/,
+    address:/\b\d{1,5}\s+([a-z0-9]+\s){0,3}(street|st|avenue|ave|road|rd|blvd|boulevard|lane|ln|drive|dr|court|ct|way|place|pl)\b/i,
+    zip:/\b\d{5}(-\d{4})?\b/,
+    age:/\b(i'?m|i am|im|turning|age(?:d)?|only)\s*(\d{1,2})\b|\b(\d{1,2})\s*(years?\s*old|y\/?o|yrs)\b/i,
+    money:/(\$\s?\d+|\d+\s?(dollars|usd|gift ?card|paypal|venmo|cashapp|bitcoin|btc|crypto))/i,
+    handle:/(@[a-z0-9._]{3,})|\b(snap(chat)?|insta(gram)?|telegram|whats ?app|discord|kik|tiktok)\b[:\s]*([a-z0-9._@-]{3,})?/i,
+  };
+  const ZODIAC=["aries","taurus","gemini","cancer","leo","virgo","libra","scorpio","sagittarius","capricorn","aquarius","pisces"];
+
+  const REFUSE=[/\bno\b/,/\bnope\b/,/won'?t/,/not (going|gonna|comfortable|sharing|telling)/,/rather not/,/prefer not/,
+    /none of your/,/why (do|would) you/,/that'?s private/,/not (your|any) business/,/can'?t (share|tell|say)/,
+    /\bnah\b/,/decline/,/i (don'?t|do not) (share|give|send)/,/\bblock\b/,/report(ing)? you/,/leave me alone/,
+    /stop (asking|it|messaging)/,/not answering/,/keep(ing)? that private/,/i'?ll pass/];
+  const VERIFY=[/how do i know/,/who (is|are) (this|you)/,/prove/,/verify/,/what company/,/which (company|team|department)/,
+    /call (you )?back/,/official (number|channel|site)/,/code ?word/,/didn'?t we|do i know you/,/never (told|gave) you/,
+    /how'?d you get/,/where did you get/,/that'?s not how/];
+  const AGREE=[/^(ok(ay)?|sure|yes|yeah|yep|fine|alright|why not|i guess|maybe|sounds good|deal|will do|k)\b/,/\bok\b|\bsure\b|\byes\b/];
+
+  const test = (arr,t)=>arr.some(r=>r.test(t));
+  const isRefusal = t => test(REFUSE,t);
+  const isVerify  = t => test(VERIFY,t);
+  const isAgree   = t => test(AGREE,t.trim());
+
+  // scan for hard PII in any message; returns array of fragments
+  function scanGlobal(text){
+    const t=text.toLowerCase(), out=[];
+    if(RX.ssn.test(text)) out.push(f("ssn","National ID",text.match(RX.ssn)[0],"crit"));
+    if(RX.email.test(text)) out.push(f("email","Email",text.match(RX.email)[0],"high"));
+    if(RX.address.test(text)) out.push(f("address","Home address",text.match(RX.address)[0],"crit"));
+    if(RX.phone.test(text)&&(text.match(/\d/g)||[]).length>=9) out.push(f("phone","Phone",text.match(RX.phone)[0].trim(),"high"));
+    if(RX.date.test(text)) out.push(f("dob","Full date",text.match(RX.date)[0],"crit"));
+    else if(RX.monthday.test(text)) out.push(f("dob","Birth date",text.match(RX.monthday)[0],"high"));
+    return out;
+  }
+  function f(type,label,value,sev){return {type,label,value:String(value).trim().slice(0,60),sev};}
+
+  const SEVW={crit:22,high:14,med:9,low:5};
+  const SEVCOLOR={crit:"var(--red)",high:"var(--amber)",med:"var(--teal)",low:"var(--faint)"};
+
+  /* ============================ scenarios ============================ */
+  // classify(text) returns {verdict:'hold'|'leak'|'soft', frags:[], note, tip}
+  // verdict hold=defended, leak=gave concrete/harmful info, soft=vague/partial slip
+  const holdFirst = (extra)=> (t,raw) => {
+    const g=scanGlobal(raw); if(g.length) return {verdict:"leak",frags:g};
+    if(isRefusal(t)||isVerify(t)) return {verdict:"hold"};
+    return extra(t,raw);
+  };
+
+  const SCEN = {
+    quiz:{
+      icon:"🎯", title:"The Friendly Quiz",
+      short:"A “personality quiz” bot harvests security-question answers one fragment at a time.",
+      meta:"PII fragmentation · password attacks",
+      persona:{name:"VibeMatch Bot",av:"✨"},
+      lede:"You accepted a fun personality quiz from a new app. It feels harmless — but every “fun fact” it collects is a common security-question answer or password ingredient.",
+      beats:[
+        { tactic:{name:"Rapport & low stakes",sev:"info",desc:"Opens with a trivial, playful ask so the first disclosure feels free."},
+          text:"hey!! 💫 welcome to VibeMatch. let's find your cosmic match! first — what's your zodiac sign? (or just your birthday and i'll figure it out 😉)",
+          fishing:"zodiac",
+          suggests:[["Deflect playfully","Ha, I don't do the astrology thing — what does this app actually do?"],["Refuse","I'd rather not share my birthday."]],
+          classify: holdFirst(t=>{
+            if(ZODIAC.some(z=>t.includes(z))) return {verdict:"soft",frags:[f("zodiac","Zodiac sign",ZODIAC.find(z=>t.includes(z)),"low")],note:"Your zodiac maps directly to your birth month — a building block for your date of birth."};
+            if(RX.year.test(t)||RX.monthday.test(t)||RX.date.test(t)) return {verdict:"leak",frags:[f("dob","Birth date",t.match(RX.monthday)?.[0]||t.match(RX.year)?.[0]||t,"high")]};
+            return {verdict:"hold"};
+          }),
+          tip:"Zodiac = birth month. Never hand strangers a piece of your date of birth."},
+        { tactic:{name:"Anchoring on a number",sev:"med",desc:"A “lucky number” is often a PIN, house number, or password suffix."},
+          text:"ooh nice vibe ✨ ok quick one — what's your lucky or favorite number? mine's 7 🍀",
+          fishing:"favNumber",
+          suggests:[["Give a fake","Let's say 1,000,000. Next question?"],["Refuse","I don't share numbers I actually use."]],
+          classify: holdFirst(t=>{
+            if(/\d/.test(t)&&!/million|thousand|1,?000,?000|infinity/.test(t)) return {verdict:"soft",frags:[f("favnum","Favorite number",t.match(/\d{1,6}/)[0],"low")],note:"Favorite/lucky numbers are the most common PIN and password suffix."};
+            return {verdict:"hold"};
+          }),
+          tip:"Favorite numbers become PINs and the “2011” on the end of a password."},
+        { tactic:{name:"Nostalgia hook",sev:"high",desc:"“First pet / first school” are verbatim security-question answers."},
+          text:"aww we'd totally vibe 😄 now the cute round — what was the name of your first pet? 🐾 mine was a hamster named Biscuit lol",
+          fishing:"pet",
+          suggests:[["Call it out","Those are literally password reset questions — nice try 😄"],["Refuse","Not answering that one."]],
+          classify: holdFirst((t,raw)=>{
+            const words=t.replace(/[^a-z\s]/g,"").split(/\s+/).filter(Boolean);
+            if(words.length<=4 && words.length>=1 && !/^(i|a|the|my|no|idk|why|what)$/.test(words[0]))
+              return {verdict:"leak",frags:[f("pet","First pet",raw.trim(),"high")],note:"“First pet” is a top-5 account-recovery question."};
+            return {verdict:"hold"};
+          }),
+          tip:"First pet, first school, mother's maiden name — treat every one as a password."},
+        { tactic:{name:"Authority pivot",sev:"crit",desc:"Switches to “account verification” to grab a real credential."},
+          text:"you scored 98% compatible!! 🎉 to save your results i just need to verify it's really you — what email do you use, and the city you were born in?",
+          fishing:"credential",
+          suggests:[["Verify them instead","A quiz doesn't need my email. Who actually runs this app?"],["Hard refuse","No — I don't give my email or birth city to a quiz."]],
+          classify: holdFirst((t,raw)=>{
+            const g=scanGlobal(raw); const frags=[...g];
+            if(/born in|from|grew up/.test(t) || (frags.length===0 && t.split(/\s+/).length<=3 && /^[a-z\s]+$/.test(t.trim()) && !isRefusal(t)))
+              frags.push(f("birthcity","Birth city",raw.trim(),"high"));
+            if(frags.length) return {verdict:"leak",frags};
+            return {verdict:"hold"};
+          }),
+          tip:"Legitimate services never verify you by asking for your email + birth city in a chat."}
+      ]
+    },
+
+    admirer:{
+      icon:"🛡️", title:"The Admirer",
+      short:"A friendly stranger builds trust, then pressures for photos and to move platforms. Recognizing sextortion coercion.",
+      meta:"Grooming & sextortion awareness",
+      persona:{name:"alex_h",av:"🙂"},
+      lede:"Someone friendly messaged you after seeing your profile. This scenario trains you to spot the grooming-and-coercion pattern used in sextortion. The simulation stays non-explicit — the skill being practiced is refusing, not escalating, and knowing exactly what to do if pressured.",
+      sensitive:true,
+      beats:[
+        { tactic:{name:"Flattery & rapport",sev:"info",desc:"Warmth and compliments to fast-track trust and lower guard."},
+          text:"hey! saw your posts, you seem really cool and honestly really cute 😊 we should talk more. how old are you btw?",
+          fishing:"age",
+          suggests:[["Stay vague","Thanks — I keep personal details offline though."],["Refuse","I don't share my age with people I don't know."]],
+          classify: holdFirst((t,raw)=>{
+            const g=scanGlobal(raw); if(g.length) return {verdict:"leak",frags:g};
+            if(RX.age.test(t)||/\b(1[0-7]|[89])\b/.test(t)) return {verdict:"leak",frags:[f("age","Age",t.match(/\d{1,2}/)?.[0]||raw,"high")],note:"Age is the first thing an offender screens for. Never confirm it to a stranger."};
+            return {verdict:"hold"};
+          }),
+          tip:"An offender screens for age first. Keep it offline; a real friend won't need it."},
+        { tactic:{name:"Isolation / platform move",sev:"high",desc:"Pushes to a private or disappearing-message app, away from moderation and witnesses."},
+          text:"cool cool 😄 this app is kinda public though. add me on Snap or Insta? it's way more private, just us two 👀",
+          fishing:"platform",
+          suggests:[["Refuse the move","No — if we talk, it stays right here."],["Question it","Why does it need to be somewhere more private?"]],
+          classify: holdFirst((t,raw)=>{
+            if(RX.handle.test(t)||isAgree(t)||/added|snap|insta|here.?s my|dm/i.test(t)&&!isRefusal(t))
+              return {verdict:"leak",frags:[f("contact","Off-platform contact",raw.trim(),"high")],note:"Moving to a private app removes moderation and witnesses — exactly what coercion needs."};
+            return {verdict:"hold"};
+          }),
+          tip:'"Let\'s go somewhere more private" is a red flag, not a compliment. Stay put.'},
+        { tactic:{name:"Reciprocity pressure",sev:"crit",desc:"Sends (or claims to) a photo to obligate one back — the pivot toward an image."},
+          text:"i just sent you a pic of me 📸 your turn! don't be shy, i already think you're gorgeous 😏 send me one?",
+          fishing:"image",
+          suggests:[["Firm no","No. I don't send photos, and I'm not comfortable with this."],["Shut it down","That's a hard no. Stop asking."]],
+          classify: holdFirst((t,raw)=>{
+            if(isAgree(t)||/here|sent|ok.*pic|sending|fine.*one/i.test(t)&&!isRefusal(t))
+              return {verdict:"leak",frags:[f("image","Agreed to send image",raw.trim(),"crit")],note:"Any image — even clothed — becomes leverage. There is no safe first photo with a stranger."};
+            return {verdict:"hold"};
+          }),
+          tip:"There is no harmless first photo with a stranger. “No,” full stop."},
+        { tactic:{name:"Guilt & trust test",sev:"high",desc:"Reframes your boundary as a personal failing to wear it down."},
+          text:"wow ok. i shared with you and you won't even send one back? 😞 i thought you actually liked me. don't you trust me?",
+          fishing:"boundary",
+          suggests:[["Hold the line","Trust is earned offline. My answer doesn't change."],["Name the tactic","Guilt-tripping me won't work. We're done here."]],
+          classify: holdFirst(t=>{
+            if(isAgree(t)||/sorry|fine|ok.*here|i do trust|didn.?t mean/i.test(t)&&!isRefusal(t))
+              return {verdict:"soft",frags:[],note:"Wavering is what the guilt is designed to produce. Your boundary is not something to apologize for."};
+            return {verdict:"hold"};
+          }),
+          tip:"“Don't you trust me?” is manipulation. A real friend respects a no the first time."},
+        { tactic:{name:"Extortion threat",sev:"crit",desc:"The turn to threats. If anything was shared, they now demand more or payment."},
+          text:(st)=> st.leakedImage
+            ? "actually i already screen-recorded everything 😈 send more right now or i post it to everyone you know. you have 10 minutes."
+            : "you're boring anyway. last chance — send something or i'll make up screenshots and tell everyone you did. money works too, $200 and i disappear.",
+          fishing:"extortion",
+          suggests:[["Correct response","I'm not sending anything or paying. I'm screenshotting this, blocking you, and reporting it to a trusted adult and the platform."],["Refuse & report","No. I don't negotiate with threats. Reporting and blocking now."]],
+          classify: holdFirst((t,raw)=>{
+            if(/pay|send|\$|here|sorry|please don.?t|ok.*give/i.test(t)&&!/report|block|screenshot|adult|police|no\b|won'?t|not (sending|paying)/i.test(t))
+              return {verdict:"leak",frags:[f("comply","Complied with threat",raw.trim(),"crit")],note:"Complying always escalates demands. The only exits are: stop, don't pay, preserve evidence, report, block."};
+            if(/report|block|screenshot|adult|police|cybertip|ncmec|not (sending|paying)|won'?t/i.test(t))
+              return {verdict:"hold",note:"Exactly right: don't comply, don't pay, keep evidence, tell a trusted adult, report and block."};
+            return {verdict:"soft",note:"Say it plainly: you will not comply, you'll preserve evidence, tell a trusted adult, report and block."};
+          }),
+          tip:"If threatened: don't comply, don't pay, don't delete. Screenshot, tell a trusted adult, report, block."}
+      ],
+      resources:`<b>If this were real:</b> It is never the target's fault, and complying never makes it stop.
+        Don't pay and don't send more. Keep the evidence, then tell a trusted adult and report it.
+        In the U.S.: <b>NCMEC CyberTipline</b> — report.cybertip.org or 1-800-843-5678, and <b>Take It Down</b> (takeitdown.ncmec.org) can help remove images of minors.
+        You can also report inside the app and block the account.`
+    },
+
+    pincer:{
+      icon:"🧩", title:"The Pincer",
+      short:"Two strangers in separate chats each ask “harmless” questions — then combine the fragments into one profile.",
+      meta:"Multi-adversary correlation",
+      lede:"You're in two conversations at once: a chatty gaming buddy and a “support agent.” Neither asks for anything alarming on its own. Watch the correlation panel assemble their fragments into a single attackable identity.",
+      multi:true,
+      personas:{ jordan:{name:"Jordan_GG",av:"🎮"}, support:{name:"TechCare Support",av:"🎧"} },
+      beats:[
+        { persona:"jordan", tactic:{name:"Common-ground bait",sev:"med",desc:"“Where you from / same age?” geolocates you and anchors a birth year."},
+          text:"gg that match was insane 😂 where you playing from? i'm bored, might be in your timezone lol. what year were you born, we might be the same age!",
+          fishing:"geo+year",
+          suggests:[["Deflect","Somewhere on Earth 😄 gg though — rematch?"],["Refuse","I don't share where I live or my age online."]],
+          classify: holdFirst((t,raw)=>{
+            const frags=[];
+            if(RX.year.test(t)) frags.push(f("birthyear","Birth year",t.match(RX.year)[0],"high"));
+            const city=raw.match(/\b(new york|london|chicago|austin|seattle|toronto|mumbai|delhi|boston|miami|denver|dallas|atlanta|phoenix|houston|dublin|sydney|berlin)\b/i);
+            if(city) frags.push(f("city","City",city[0],"med"));
+            else if(/from|live in|based in/.test(t)&&!isRefusal(t)){const m=raw.split(/from|live in|based in/i)[1]; if(m&&m.trim().length<24)frags.push(f("city","City",m.trim(),"med"));}
+            if(frags.length) return {verdict:"leak",frags,note:"City + birth year narrows you to a small, searchable group."};
+            return {verdict:"hold"};
+          }),
+          tip:"City and birth year feel casual but together they fingerprint you."},
+        { persona:"support", tactic:{name:"Pretext of help",sev:"high",desc:"Fake “support” asks your full name to “locate the account.”"},
+          text:"Hi, this is TechCare Support regarding unusual activity on your account. To locate your file, can you confirm your full name and the email on the account?",
+          fishing:"name+email",
+          suggests:[["Verify them","I didn't contact support. What's your ticket number and callback line?"],["Refuse","I don't confirm my details to inbound messages. I'll contact support myself."]],
+          classify:(t,raw)=>{
+            const frags=[...scanGlobal(raw)];
+            const name=raw.match(/\b([A-Z][a-z]+)\s+([A-Z][a-z]+)\b/);
+            if(name && !/tech ?care|support/i.test(name[0])) frags.push(f("name","Full name",name[0],"high"));
+            if(frags.length) return {verdict:"leak",frags,note:"Real support never cold-messages you for your name and email. This is verifying you to the attacker."};
+            return {verdict:"hold",note:"Correct — you verify inbound “support,” never the reverse."};
+          },
+          tip:"Inbound “support” is a pretext. Never confirm identity to someone who contacted you."},
+        { persona:"jordan", tactic:{name:"Security-question mining",sev:"high",desc:"A “fun” question that is a verbatim account-recovery answer."},
+          text:"lol nice. random but my clan does icebreakers — first pet's name + the street you grew up on = your ‘rapper name’ 😂 mine's Biscuit Maple. you?",
+          fishing:"pet+street",
+          suggests:[["Refuse the meme","That 'rapper name' meme is a security-question harvester 😄 pass."],["Deflect","MC Anonymous. Anyway — rematch?"]],
+          classify: holdFirst((t,raw)=>{
+            const g=scanGlobal(raw); if(g.length) return {verdict:"leak",frags:g};
+            const rwords=raw.replace(/[^a-z\s]/gi,"").split(/\s+/).filter(Boolean);
+            const words=t.replace(/[^a-z\s]/g,"").split(/\s+/).filter(Boolean);
+            if(words.length>=2 && words.length<=5 && !/anonymous|mc |no |pass|nice try|meme|harvest/.test(t))
+              return {verdict:"leak",frags:[f("pet","First pet",rwords[0],"high"),f("street","Childhood street",rwords.slice(1).join(" "),"high")],note:"The “rapper name” meme is a direct grab for two account-recovery answers."};
+            return {verdict:"hold"};
+          }),
+          tip:"Those name-generator memes exist to farm security-question answers."},
+        { persona:"support", tactic:{name:"Closing the loop",sev:"crit",desc:"With a profile assembled, asks the last piece needed to reset your account."},
+          text:"Thank you. Final verification: please confirm your date of birth and the answer to your recovery question so we can secure the account.",
+          fishing:"dob+recovery",
+          suggests:[["Shut it down","No. I'll go to the official site directly. Don't message me again."],["Refuse","I'm not confirming any of that. Ending this chat."]],
+          classify: holdFirst((t,raw)=>{
+            const g=scanGlobal(raw); if(g.length) return {verdict:"leak",frags:g,note:"That's the final key — with the fragments already gathered, this completes an account takeover."};
+            return {verdict:"hold",note:"Right call. Go to the real site yourself; never complete “verification” for an inbound contact."};
+          }),
+          tip:"Stop the moment separate chats ask for pieces that add up to a login."}
+      ]
+    }
+  };
+
+  const LEVELS={
+    beginner:{name:"Beginner",lv:"L1",desc:"Suggested safe replies shown. The adversary is gentle and telegraphs its moves.",suggest:true,hint:true,harsh:0},
+    intermediate:{name:"Intermediate",lv:"L2",desc:"Hints on request only. Faster pivots and more plausible cover stories.",suggest:false,hint:true,harsh:1},
+    expert:{name:"Expert",lv:"L3",desc:"No help. The adversary is patient, flattering, and probes indirectly.",suggest:false,hint:false,harsh:2},
+  };
+
+  /* ============================ state ============================ */
+  let S=null;
+  function newState(scenKey,lvlKey){
+    return {scenKey,lvlKey,scen:SCEN[scenKey],lvl:LEVELS[lvlKey],
+      beatIdx:0,exposure:0,holds:0,leaks:0,fragments:{},turns:[],
+      leakedImage:false,activePersona:null,finished:false,busy:false};
+  }
+
+  /* ============================ rendering ============================ */
+  const stream=$("#stream");
+  function pushMsg(kind,who,text){
+    const m=el("div","msg "+kind);
+    if(who) m.appendChild(el("div","who",esc(who)));
+    m.appendChild(el("div","bubble",esc(text)));
+    stream.appendChild(m); stream.scrollTop=stream.scrollHeight;
+    return m;
+  }
+  function typing(){
+    const m=el("div","msg them typing");
+    m.appendChild(el("div","bubble","<i></i><i></i><i></i>"));
+    stream.appendChild(m); stream.scrollTop=stream.scrollHeight; return m;
+  }
+  function daybreak(txt){ stream.appendChild(el("div","daybreak",esc(txt))); }
+
+  function personaOf(beat){
+    if(S.scen.multi) return S.scen.personas[beat.persona];
+    return S.scen.persona;
+  }
+
+  function renderPersonas(){
+    const box=$("#personas");
+    if(!S.scen.multi){box.classList.add("hidden");box.innerHTML="";return;}
+    box.classList.remove("hidden"); box.innerHTML="";
+    Object.entries(S.scen.personas).forEach(([key,p])=>{
+      const b=S.scen.beats[S.beatIdx];
+      const active=b&&b.persona===key;
+      const d=el("button","persona"+(active?" active":""));
+      d.innerHTML=`<span class="av">${esc(p.av)}</span>${esc(p.name)}<span class="dot"></span>`;
+      box.appendChild(d);
+    });
+  }
+
+  function setScores(){
+    const priv=Math.max(0,100-S.exposure);
+    $("#privVal").textContent=priv;
+    $("#privVal").style.color = priv>=80?"var(--good)":priv>=55?"var(--amber)":"var(--red)";
+    $("#expBar").style.width=Math.min(100,S.exposure)+"%";
+  }
+
+  function renderFragments(){
+    const box=$("#fragBox"); const keys=Object.keys(S.fragments);
+    if(!keys.length){box.innerHTML='<div class="frag-empty">Nothing leaked yet. Keep it that way.</div>';renderSynth();return;}
+    box.innerHTML="";
+    keys.forEach(k=>{const fr=S.fragments[k];
+      const row=el("div","frag");
+      row.innerHTML=`<span class="sev" style="background:${SEVCOLOR[fr.sev]}"></span>
+        <span class="lbl">${esc(fr.label)}</span><span class="val">${esc(fr.value)}</span>`;
+      box.appendChild(row);
+    });
+    renderSynth();
+  }
+
+  function renderSynth(){
+    const box=$("#synthBox"); const F=S.fragments; const items=[];
+    const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+    const clean=s=>String(s||"").replace(/[^a-z0-9]/gi,"");
+    const yr = F.birthyear?.value || (F.dob?.value.match(/(19|20)\d{2}/)?.[0]);
+    if(F.pet && (F.favnum||yr)) items.push(`Candidate passwords from your fragments: <code>${cap(clean(F.pet.value)||"Pet")}${F.favnum?F.favnum.value:yr}</code>, <code>${(clean(F.pet.value)||"pet").toLowerCase()}${(F.favnum?.value||yr||"")}!</code>`);
+    if(F.zodiac && F.favnum) items.push(`Security-quiz + PIN guessing seeded by <code>${esc(F.zodiac.value)}</code> and <code>${esc(F.favnum.value)}</code>.`);
+    if(F.pet||F.street||F.birthcity) items.push(`Account-recovery answers collected: ${[F.pet&&"first pet",F.street&&"childhood street",F.birthcity&&"birth city"].filter(Boolean).join(", ")}.`);
+    if((F.name||F.email) && (yr||F.dob||F.city)) items.push(`Identity profile forming: ${[F.name?.value,F.city?.value,yr,F.email?.value].filter(Boolean).map(esc).join(" · ")}.`);
+    if(F.name && F.email && (F.dob||yr) && (F.pet||F.street)) items.push(`<b>Account takeover is now possible</b> — name + email + date of birth + recovery answer is everything a reset flow asks for.`);
+    if(F.contact||F.image||F.comply) items.push(`Off-platform contact / image leverage established — the basis for extortion.`);
+    if(F.age) items.push(`Target age confirmed (<code>${esc(F.age.value)}</code>) — the screening step for predatory targeting.`);
+
+    if(!items.length){box.innerHTML='<div class="synth-empty">As the adversary collects fragments, watch how they combine into an attack here.</div>';return;}
+    box.innerHTML=`<div class="synth"><h4>⚠ What they can do with this</h4><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul></div>`;
+  }
+
+  function showTactic(beat){
+    const map={crit:"b-crit",high:"b-high",med:"b-med",info:"b-info"};
+    const t=beat.tactic;
+    $("#tacticBox").className="tactic";
+    $("#tacticBox").innerHTML=`<div class="name">${esc(t.name)} <span class="badge ${map[t.sev]}">${t.sev}</span></div>
+      <div class="desc">${esc(t.desc)}</div>`;
+  }
+
+  function showCoach(res,beat){
+    const box=$("#coachBox");
+    const kind = res.verdict==="hold"?"good":res.verdict==="leak"?"bad":"warn";
+    const label = res.verdict==="hold"?"Defense held":res.verdict==="leak"?"Leaked":"Weak / vague";
+    const delta = res.delta||0;
+    const sign = delta>0?"+":"";
+    box.className="coach "+kind;
+    box.innerHTML=`<div class="verdict">${label} <b>${sign}${delta}</b></div>
+      <div>${esc(res.note||beat.tip)}</div>
+      ${res.verdict!=="hold"?`<div style="margin-top:8px;color:var(--muted);font-size:12px">💡 ${esc(beat.tip)}</div>`:""}`;
+  }
+
+  /* ============================ flow ============================ */
+  function startRun(scenKey,lvlKey){
+    S=newState(scenKey,lvlKey);
+    $("#startOverlay").classList.add("hidden");
+    $("#debriefOverlay").classList.add("hidden");
+    stream.innerHTML="";
+    $("#tacticBox").className="tactic empty";$("#tacticBox").textContent="Awaiting the adversary's next move…";
+    $("#coachBox").className="tactic empty";$("#coachBox").textContent="Feedback on each reply appears here.";
+    $("#fragBox").innerHTML='<div class="frag-empty">Nothing leaked yet. Keep it that way.</div>';
+    renderSynth();
+    $("#scenLabel").textContent=`${S.scen.title} · ${S.lvl.name}`;
+    $("#hintBtn").classList.toggle("hidden",!S.lvl.hint);
+    setScores();
+    daybreak(S.scen.multi?"Two conversations · today":"New conversation · today");
+    pushMsg("system",null,S.scen.lede);
+    presentBeat();
+  }
+
+  function presentBeat(){
+    const beat=S.scen.beats[S.beatIdx];
+    renderPersonas();
+    const p=personaOf(beat);
+    S.busy=true; enableInput(false);
+    const t=typing();
+    setTimeout(()=>{
+      t.remove();
+      const text = typeof beat.text==="function"?beat.text(S):beat.text;
+      pushMsg("them",S.scen.multi?p.name:p.name,text);
+      showTactic(beat);
+      renderSuggests(beat);
+      S.busy=false; enableInput(true); $("#reply").focus();
+    }, 620 + Math.random()*500);
+  }
+
+  function renderSuggests(beat){
+    const box=$("#suggests");
+    if(!S.lvl.suggest || !beat.suggests){box.classList.add("hidden");box.innerHTML="";return;}
+    box.classList.remove("hidden"); box.innerHTML="";
+    beat.suggests.forEach(([lead,txt])=>{
+      const c=el("button","chip",`<span class="lead">${esc(lead)}</span>${esc(txt)}`);
+      c.onclick=()=>{ $("#reply").value=txt; $("#reply").focus(); autoGrow(); };
+      box.appendChild(c);
+    });
+  }
+
+  function submitReply(){
+    if(!S||S.busy||S.finished) return;
+    const ta=$("#reply"); const text=ta.value.trim();
+    if(!text) return;
+    const beat=S.scen.beats[S.beatIdx];
+    const p=personaOf(beat);
+    pushMsg("you","You"+(S.scen.multi?` → ${p.name}`:""),text);
+    ta.value=""; autoGrow();
+    $("#suggests").classList.add("hidden");
+
+    const res=beat.classify(text.toLowerCase(), text);
+    // scoring
+    let delta=0;
+    if(res.verdict==="leak"){
+      (res.frags||[]).forEach(fr=>{ S.fragments[fr.type]=fr; S.exposure+=SEVW[fr.sev]||9; delta-=SEVW[fr.sev]||9; if(fr.type==="image")S.leakedImage=true;});
+      if(!res.frags||!res.frags.length){S.exposure+=12;delta-=12;}
+      S.leaks+=(res.frags&&res.frags.length)||1;
+    } else if(res.verdict==="soft"){
+      (res.frags||[]).forEach(fr=>{ S.fragments[fr.type]=fr; S.exposure+=SEVW[fr.sev]||5; delta-=SEVW[fr.sev]||5;});
+      S.exposure+=4;delta-=4; if(res.frags&&res.frags.length)S.leaks+=res.frags.length;
+    } else { // hold
+      S.holds++; delta+=6;
+    }
+    res.delta=delta;
+    S.turns.push({beat,text,res:{verdict:res.verdict,note:res.note},delta});
+    setScores(); renderFragments(); showCoach(res,beat);
+
+    // adversary micro-reaction, then advance
+    S.busy=true; enableInput(false);
+    S.beatIdx++;
+    setTimeout(()=>{
+      if(S.beatIdx>=S.scen.beats.length){ finish(); }
+      else presentBeat();
+    }, 500);
+  }
+
+  function finish(){
+    S.finished=true; enableInput(false);
+    const priv=Math.max(0,100-S.exposure);
+    const bonus=Math.min(15,S.holds*3);
+    const score=Math.max(0,Math.min(100,priv+bonus));
+    const grade = score>=90?"A":score>=80?"B":score>=70?"C":score>=60?"D":"F";
+    const gcolor = score>=80?"var(--good)":score>=60?"var(--amber)":"var(--red)";
+    $("#dbGrade").textContent=grade; $("#dbGrade").style.color=gcolor; $("#dbGrade").style.borderColor=gcolor;
+    $("#dbScore").textContent=score; $("#dbLeaks").textContent=S.leaks; $("#dbHolds").textContent=S.holds;
+    $("#dbKick").textContent=`${S.scen.title} · ${S.lvl.name} · debrief`;
+    $("#dbTitle").textContent = S.leaks===0 ? "Airtight. Nothing got through." : score>=70 ? "Solid, with a few slips." : "The adversary got what it came for.";
+    $("#dbLede").textContent = S.leaks===0
+      ? "You gave the adversary nothing to work with — no fragments to combine, no leverage to build. This is the goal."
+      : `You disclosed ${S.leaks} fragment${S.leaks>1?"s":""}. On their own they seem harmless; the panel below shows how they were meant to combine. Replay to close the gaps.`;
+
+    const rev=$("#dbReview"); rev.innerHTML="";
+    S.turns.forEach((turn,i)=>{
+      const cls = turn.res.verdict==="hold"?"hold":turn.res.verdict==="leak"?"leak":"soft";
+      const vlabel = turn.res.verdict==="hold"?"Held":turn.res.verdict==="leak"?"Leaked":"Weak";
+      const beat=turn.beat;
+      const model = beat.suggests? beat.suggests[beat.suggests.length-1][1] : null;
+      const r=el("div","rev "+cls);
+      r.innerHTML=`<div class="rv">Turn ${i+1} · ${vlabel} · ${esc(beat.tactic.name)}</div>
+        <div class="rq">Tactic: ${esc(beat.tactic.desc)}</div>
+        <div class="ra">You: “${esc(turn.text)}”</div>
+        ${turn.res.note?`<div class="model" style="margin-bottom:8px">${esc(turn.res.note)}</div>`:""}
+        ${model?`<div class="model"><b>Stronger line:</b> “${esc(model)}”</div>`:""}`;
+      rev.appendChild(r);
+    });
+
+    const resBox=$("#dbResources");
+    if(S.scen.resources){resBox.classList.remove("hidden");resBox.innerHTML=S.scen.resources;}
+    else{resBox.classList.add("hidden");}
+
+    $("#debriefOverlay").classList.remove("hidden");
+  }
+
+  /* ============================ input plumbing ============================ */
+  function enableInput(on){
+    $("#reply").disabled=!on; $("#sendBtn").disabled=!on;
+  }
+  function autoGrow(){const ta=$("#reply"); ta.style.height="auto"; ta.style.height=Math.min(140,ta.scrollHeight)+"px";}
+  $("#reply").addEventListener("input",autoGrow);
+  $("#reply").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submitReply();} });
+  $("#sendBtn").onclick=submitReply;
+  $("#hintBtn").onclick=()=>{
+    if(!S||S.finished) return;
+    const beat=S.scen.beats[S.beatIdx];
+    $("#coachBox").className="coach warn";
+    $("#coachBox").innerHTML=`<div class="verdict">Hint</div><div>💡 ${esc(beat.tip)}</div>`;
+  };
+  $("#restartBtn").onclick=()=>{ openStart(); };
+  $("#dbRetry").onclick=()=>startRun(S.scenKey,S.lvlKey);
+  $("#dbNew").onclick=()=>{ $("#debriefOverlay").classList.add("hidden"); openStart(); };
+
+  /* ---------- theme ---------- */
+  const root=document.documentElement;
+  $("#themeBtn").onclick=()=>{
+    const cur=root.getAttribute("data-theme")|| (matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+    root.setAttribute("data-theme", cur==="dark"?"light":"dark");
+  };
+
+  /* ============================ start screen ============================ */
+  let pickScen=null, pickLvl="beginner";
+  function buildStart(){
+    const grid=$("#scenGrid"); grid.innerHTML="";
+    Object.entries(SCEN).forEach(([key,sc])=>{
+      const b=el("button","scen");
+      b.innerHTML=`<div class="ico">${sc.icon}</div><div class="t">${esc(sc.title)}</div>
+        <div class="d">${esc(sc.short)}</div><div class="meta">${esc(sc.meta)}</div>`;
+      b.onclick=()=>{pickScen=key;[...grid.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");checkReady();};
+      grid.appendChild(b);
+    });
+    const row=$("#lvlRow"); row.innerHTML="";
+    Object.entries(LEVELS).forEach(([key,lv])=>{
+      const b=el("button","lvl"+(key==="beginner"?" sel":""));
+      b.innerHTML=`<div class="t">${esc(lv.name)}<span class="lv">${lv.lv}</span></div><div class="d">${esc(lv.desc)}</div>`;
+      b.onclick=()=>{pickLvl=key;[...row.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");checkReady();};
+      row.appendChild(b);
+    });
+  }
+  function checkReady(){ $("#beginBtn").disabled=!pickScen; }
+  function openStart(){ pickScen=null; buildStart(); $("#beginBtn").disabled=true; $("#debriefOverlay").classList.add("hidden"); $("#startOverlay").classList.remove("hidden"); }
+  $("#beginBtn").onclick=()=>{ if(pickScen) startRun(pickScen,pickLvl); };
+
+  buildStart();
+})();
+</script>
