@@ -44,3 +44,17 @@ detection is then EXACT and verifiable via `profileClassify`: revealing an ASSIG
 value = leak; any other substantive value = decoy (disinformation); refusal = hold.
 This solved the "is this a real city?" validation problem. Exposed identity fields get
 struck through in the card. The profile also powers the Hint.
+
+**Multiple scripts per scenario (added):** every extract scenario ships 2+ interchangeable
+scripts, drawn at random per run via `scriptsOf(scen)` + `PICK`. A scenario's own `beats` is
+script A; `altScripts:[...]` holds alternates (each may override persona/personas/lede/
+resources). Read script-or-scenario properties through the `SC(prop)` accessor, and the active
+beats via `S.beats` — never `S.scen.beats`. The Impersonator instead randomises over its
+`IMPOSTORS` pretext pool.
+
+**Voice scenario (added):** `voicex` ("The Voice Note") is an extract scenario with
+`voice:true`, so adversary beats render as playable voice notes (`pushVoice`) spoken with the
+browser's built-in `speechSynthesis` — local, no network, no microphone. A "🎙 Send voice note"
+button simulates replying by voice and ALWAYS scores a critical `voicebio` leak: the lesson is
+that seconds of clean audio is a cloneable biometric, regardless of what you said. Teaches that
+audio "evidence" is synthesisable and proves nothing.

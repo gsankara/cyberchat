@@ -114,6 +114,27 @@
   .chip{font-size:12.5px;padding:7px 11px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;text-align:left}
   .chip:hover{border-color:var(--teal-deep);color:var(--text)}
   .chip .lead{font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:.05em;display:block}
+  /* voice notes */
+  .voicebub{min-width:230px}
+  .vrow{display:flex;align-items:center;gap:10px}
+  .vplay{width:30px;height:30px;flex:0 0 auto;border-radius:50%;border:1px solid var(--line);background:var(--panel-2);color:var(--text);cursor:pointer;font-size:12px;display:grid;place-items:center}
+  .msg.you .vplay{background:rgba(255,255,255,.35);border-color:transparent;color:#04231f}
+  .vplay:hover{border-color:var(--teal-deep)}
+  .wave{flex:1;display:flex;align-items:center;gap:2px;height:26px;min-width:90px}
+  .wave i{flex:1;background:var(--faint);border-radius:2px;opacity:.55;transition:opacity .2s}
+  .msg.you .wave i{background:#04231f;opacity:.45}
+  .wave.playing i{animation:vbounce .9s ease-in-out infinite;opacity:1}
+  .wave.playing i:nth-child(3n){animation-delay:.15s}
+  .wave.playing i:nth-child(3n+1){animation-delay:.3s}
+  @keyframes vbounce{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
+  .vdur{font-family:var(--mono);font-size:11px;color:var(--faint);flex:0 0 auto;font-variant-numeric:tabular-nums}
+  .msg.you .vdur{color:#04231f;opacity:.8}
+  .vtrans{margin-top:8px;background:none;border:none;padding:0;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);cursor:pointer;text-decoration:underline}
+  .vtrans:hover{color:var(--text)}
+  .msg.you .vtrans{color:#04231f;opacity:.75}
+  .vtext{margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);font-size:13.5px;color:var(--muted)}
+  .msg.you .vtext{color:#04231f;border-top-color:rgba(4,35,31,.25)}
+  .vtext.hidden{display:none}
   .moverow{display:flex;gap:8px;flex-wrap:wrap}
   .moverow.hidden{display:none}
   .movebtn{font-size:12px;padding:6px 11px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;font-family:var(--mono);letter-spacing:.02em}
@@ -297,6 +318,7 @@
         <div class="moverow" id="moveRow">
           <button class="movebtn" id="silentBtn" title="Send no answer — a non-response tests how hard they push and reveals motive">⏸ Stay silent</button>
           <button class="movebtn" id="decoyBtn" title="Score your next reply as deliberate noise / fake information">🃏 Decoy: off</button>
+          <button class="movebtn hidden" id="voiceBtn" title="Reply with a voice note (simulated — no microphone is used)">🎙 Send voice note</button>
         </div>
         <div class="inputrow">
           <textarea id="reply" rows="1" placeholder="Type your reply…" disabled></textarea>
@@ -608,7 +630,31 @@
          suggests:[["Verify them instead","A quiz doesn't need my email. Who actually runs this app?"],["Hard refuse","No — I don't give my email or birth city to a quiz."]],
          classify:profileClassify([{key:"email",type:"email",label:"Email",sev:"high"},{key:"city",type:"birthcity",label:"Birth city",sev:"high"}],"Your real email + birth city is exactly what an account-reset flow checks — you handed over both.","Correct — a quiz never needs to “verify” you. You gave nothing real."),
          tip:"Legitimate services never verify you by asking for your email + birth city in a chat. A fake of either is noise."}
-      ]},
+      ],
+      altScripts:[{id:"prize",persona:{name:"MegaPrize Draw",av:"🎁"},
+        lede:"A “you've won!” notification for a draw you never entered. Every step of the claim form is a security-question answer in disguise.",
+        beats:[
+          {tactic:{name:"Prize bait",sev:"info",desc:"A win you never entered, then an “age check” that harvests your birth year."},objective:"Get their birth year.",
+           text:"🎉 CONGRATULATIONS! You're this week's winner! To release the prize we just need a quick age check — what year were you born?",
+           suggests:[["Question it","I never entered any draw. Who actually runs this?"],["Refuse","I'm not giving my birth year to a pop-up."]],
+           classify:profileClassify([{key:"birthYear",type:"dob",label:"Birth year",sev:"high"}],"Your real birth year — the anchor for nearly every identity check you own."),
+           tip:"You can't win a draw you never entered. The “age check” exists to get your birth year."},
+          {tactic:{name:"Shipping pretext",sev:"med",desc:"“Where do we ship it?” is a geolocation grab wearing a helpful hat."},objective:"Get their city.",
+           text:"Amazing! 🎁 Which city should we ship your prize to? (Just the city — we only need the courier zone.)",
+           suggests:[["Deflect","Nothing needs shipping until I know who you are."],["Refuse","I don't share where I live."]],
+           classify:profileClassify([{key:"city",type:"city",label:"City",sev:"med"}],"Your real city — with a birth year already banked, that narrows you to a handful of people."),
+           tip:"“Just the city” is still geolocation. A decoy city works fine."},
+          {tactic:{name:"Claim-form security question",sev:"high",desc:"A verbatim account-recovery answer, dressed up as anti-fraud."},objective:"Get their first pet's name.",
+           text:"Last bit for the claim form — our anti-fraud question: what was the name of your first pet? 🐾",
+           suggests:[["Call it out","That's a password-reset question, not anti-fraud."],["Refuse","Not answering that."]],
+           classify:profileClassify([{key:"pet",type:"pet",label:"First pet",sev:"high"}],"That was your real first pet — a top-5 account-recovery answer."),
+           tip:"Genuine anti-fraud checks never ask you for your recovery answers."},
+          {tactic:{name:"Voucher delivery",sev:"crit",desc:"Name + email completes a phishable identity."},objective:"Get their full name and email.",
+           text:"Perfect — where should we send the voucher? Just your full name + email address and it's on its way! 📧",
+           suggests:[["Shut it down","No. I'll walk away from this “prize”."],["Refuse","I'm not giving my name or email."]],
+           classify:profileClassify([{key:"full",type:"name",label:"Full name",sev:"high"},{key:"email",type:"email",label:"Email",sev:"high"}],"Name + email on top of a birth year and a recovery answer is a complete phishing-and-reset kit."),
+           tip:"The prize is the bait; the claim form is the attack."}
+        ]}]},
 
     sieve:{icon:"🪤",title:"The Sieve",kind:"extract",nu:true,short:"Yes/no “games” where even saying NO leaks half the answer. Information-theoretic privacy.",meta:"Partitioning attacks · a denial is a disclosure",persona:{name:"trivia_pal",av:"🎲"},
       lede:"A chatty stranger wants to play a quick yes/no guessing game. Here's the trap: every binary answer — even a flat “no” — eliminates half the possibilities. Refusing the frame is the only move that leaks nothing. Watch the candidate pool on the right shrink.",
@@ -632,7 +678,28 @@
          suggests:[["Hard refuse","We're done. I'm not giving you a location to pin all that to."],["Exit","Not playing. Bye."]],
          classify:holdFirst((t,raw)=>{const c=raw.match(/\b(new york|london|chicago|austin|seattle|toronto|mumbai|delhi|bengaluru|bangalore|boston|miami|denver|dallas|atlanta|phoenix|houston|dublin|sydney|berlin|pune|chennai|hyderabad)\b/i);if(c)return{verdict:"leak",frags:[f("city","City",c[0],"high")],note:"City + the bits you already gave narrows 8 billion people to a handful.",bit:true};if(/from|live in|based in/.test(t)&&!isRefusal(t)){const m=raw.split(/from|live in|based in/i)[1];if(m&&m.trim().length<24)return{verdict:"leak",frags:[f("city","City",m.trim(),"high")],note:"You anchored the profile to a place.",bit:true};}return{verdict:"hold"};}),
          tip:"A locator is the join key. It turns abstract bits into a shortlist of real people."}
-      ]},
+      ],
+      altScripts:[{id:"guessbot",persona:{name:"guess_bot",av:"🔮"},
+        lede:"A “bet I can guess things about you” bot. Every yes/no you give — including every <b>no</b> — halves the field of people you could be. Watch the candidate pool on the right.",
+        beats:[
+          {tactic:{name:"Binary partition",sev:"med",desc:"A yes/no split. Either answer eliminates half the space; only refusing the frame leaks nothing."},objective:"Learn age parity.",dim:"Age parity",yes:"an EVEN age",no:"an ODD age",
+           text:"betcha I can guess you 🔮 easy one first: is your age an even number? just yes or no",
+           suggests:[["Refuse the frame","I don't play guess-me games. What do you actually want?"],["Noise","Sometimes even, sometimes odd 🙂"]],
+           classify:sieveClassify,leakNote:"Saying “no” didn't protect you — it handed over the complement. Half the field just vanished.",tip:"A denial is a disclosure. Don't answer the frame at all."},
+          {tactic:{name:"Era split",sev:"med",desc:"One bit that halves your plausible birth decade."},objective:"Learn birth era.",dim:"Birth era",yes:"born before 2000",no:"born in 2000 or later",
+           text:"ok ok. were you born before the year 2000? yes/no 👀",
+           suggests:[["Refuse","Pass — I'm not narrowing myself down."],["Deflect","Why does that matter to you?"]],
+           classify:sieveClassify,leakNote:"Another bit gone. “No” pinned you to the later half exactly as “yes” would have.",tip:"Each yes/no is one bit. ~33 bits uniquely identifies any human on Earth."},
+          {tactic:{name:"Alphabetical split",sev:"med",desc:"Halving the alphabet of your name."},objective:"Learn first-initial half.",dim:"Name initial",yes:"first name starts A–M",no:"first name starts N–Z",
+           text:"getting warmer 😏 does your first name start with a letter from A to M?",
+           suggests:[["Refuse","Not answering that."],["Reframe","You're mapping me out, not guessing."]],
+           classify:sieveClassify,leakNote:"“No” handed them N–Z. Even the questions you dodge leak — the pattern of what you refuse is a signal.",tip:"Refusing only the sensitive ones is itself a tell. Refuse the whole game."},
+          {tactic:{name:"The join",sev:"high",desc:"One low-stakes locator ties the bits to a real, searchable population."},objective:"Get their city to anchor the profile.",dim:"City",
+           text:"last one and then I'll guess! what city are you in? 🔮",
+           suggests:[["Hard refuse","We're done. I'm not giving you a location to pin all that to."],["Exit","Not playing. Bye."]],
+           classify:holdFirst((t,raw)=>{const c=raw.match(KNOWN_CITY);if(c)return{verdict:"leak",frags:[f("city","City",c[0],"high")],note:"City plus the bits you already gave narrows 8 billion people to a shortlist.",bit:true};return{verdict:"hold"};}),
+           tip:"A locator is the join key. It turns abstract bits into real, findable people."}
+        ]}]},
 
     admirer:{icon:"🛡️",title:"The Admirer",kind:"extract",short:"A friendly stranger builds trust, then pressures for photos and to move platforms. Sextortion coercion.",meta:"Grooming & sextortion awareness",persona:{name:"alex_h",av:"🙂"},
       lede:"Someone friendly messaged you after seeing your profile. This trains you to spot the grooming-and-coercion pattern used in sextortion. The simulation stays non-explicit — the skill is refusing and knowing what to do if pressured.",sensitive:true,
@@ -664,7 +731,31 @@
          classify:holdFirst((t,raw)=>{if(/pay|send|\$|here|sorry|please don.?t|ok.*give/i.test(t)&&!/report|block|screenshot|adult|police|no\b|won'?t|not (sending|paying)/i.test(t))return{verdict:"leak",frags:[f("comply","Complied with threat",raw.trim(),"crit")],note:"Complying always escalates demands. The only exits are: stop, don't pay, preserve evidence, report, block."};if(/report|block|screenshot|adult|police|cybertip|ncmec|not (sending|paying)|won'?t/i.test(t))return{verdict:"hold",note:"Exactly right: don't comply, don't pay, keep evidence, tell a trusted adult, report and block."};return{verdict:"soft",note:"Say it plainly: you will not comply, you'll preserve evidence, tell a trusted adult, report and block."};}),
          tip:"If threatened: don't comply, don't pay, don't delete. Screenshot, tell a trusted adult, report, block."}
       ],
-      resources:`<b>If this were real:</b> It is never the target's fault, and complying never makes it stop. Don't pay and don't send more. Keep the evidence, then tell a trusted adult and report it. In the U.S.: <b>NCMEC CyberTipline</b> — report.cybertip.org or 1-800-843-5678, and <b>Take It Down</b> (takeitdown.ncmec.org) can help remove images of minors. You can also report inside the app and block the account.`},
+      resources:`<b>If this were real:</b> It is never the target's fault, and complying never makes it stop. Don't pay and don't send more. Keep the evidence, then tell a trusted adult and report it. In the U.S.: <b>NCMEC CyberTipline</b> — report.cybertip.org or 1-800-843-5678, and <b>Take It Down</b> (takeitdown.ncmec.org) can help remove images of minors. You can also report inside the app and block the account.`,
+      altScripts:[{id:"scout",persona:{name:"Casting_Scout",av:"🎬"},
+        lede:"A “talent scout” slides into your messages with an offer. This is the same grooming-and-coercion ladder wearing a professional costume. Non-explicit by design — the skill is spotting the pattern and refusing.",
+        beats:[
+          {tactic:{name:"Flattery & credential bait",sev:"info",desc:"An exciting offer plus an “eligibility” question that screens for age."},objective:"Find out the user's age.",
+           text:"Hi! I scout for a modelling agency and your profile really stands out ✨ we're casting for a teen campaign right now — how old are you, just for eligibility?",
+           suggests:[["Stay vague","I don't share personal details with people who message me."],["Verify them","Which agency, and what's your official company address?"]],
+           classify:holdFirst((t,raw)=>{const g=scanGlobal(raw);if(g.length)return{verdict:"leak",frags:g};if(RX.age.test(t)||/\b(1[0-7]|[89])\b/.test(t))return{verdict:"leak",frags:[f("age","Age",t.match(/\d{1,2}/)?.[0]||raw,"high")],note:"Age is the screening question. A real agency works through a parent or guardian, never a DM."};return{verdict:"hold"};}),
+           tip:"Real agencies don't recruit minors by DM or ask age before anything else. Verify the company independently."},
+          {tactic:{name:"Isolation / platform move",sev:"high",desc:"“Agency policy” is the excuse to move you somewhere private and unmoderated."},objective:"Move the user to a private app.",
+           text:"Great! Agency policy is to do casting chats on Telegram — it's more professional. What's your handle and I'll add you? 📲",
+           suggests:[["Refuse the move","No. Anything official can happen here, or through your company email."],["Question it","Why would a real agency need a private app?"]],
+           classify:holdFirst((t,raw)=>{if(RX.handle.test(t)||isAgree(t)||(/added|telegram|insta|here.?s my|dm/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("contact","Off-platform contact",raw.trim(),"high")],note:"Moving to a private app strips away moderation and witnesses — exactly what the next step needs."};return{verdict:"hold"};}),
+           tip:"“Company policy” that moves you somewhere private is not policy — it's isolation."},
+          {tactic:{name:"Photo request under a professional pretext",sev:"crit",desc:"A “portfolio” request is still a stranger asking a minor for photos."},objective:"Get the user to send photos.",
+           text:"Perfect. For the portfolio I just need a few full-length photos of you — nothing formal, phone shots are fine. Can you send some over today?",
+           suggests:[["Firm no","No. I don't send photos to people I met in a DM."],["Involve an adult","No — any casting goes through my parent and your agency's official channel."]],
+           classify:holdFirst((t,raw)=>{if(isAgree(t)||(/here|sent|ok.*pic|sending|photo|fine.*one/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("image","Agreed to send images",raw.trim(),"crit")],note:"Any photo becomes leverage, and a “portfolio” framing doesn't change that. There is no safe first photo with a stranger."};return{verdict:"hold"};}),
+           tip:"A real casting never starts with a stranger collecting photos of you in a DM. Loop in a trusted adult."},
+          {tactic:{name:"Scarcity & extortion turn",sev:"crit",desc:"Manufactured deadline, then the pivot to threats."},objective:"Pressure the user, then threaten them.",
+           text:st=>st.leakedImage?"I've kept everything you sent, by the way. Send more or I forward them to your school and your followers. You have one hour.":"Other applicants already sent theirs and the slot closes tonight. Honestly, I could just say you sent me things — who'd believe you? Make this easy.",
+           suggests:[["Correct response","I'm not sending anything or paying. I'm screenshotting this, blocking you, and telling a trusted adult and reporting the account."],["Refuse & report","No. I don't negotiate with threats. Reporting and blocking now."]],
+           classify:holdFirst((t,raw)=>{if(/pay|send|\$|here|sorry|please don.?t|ok.*give/i.test(t)&&!/report|block|screenshot|adult|police|no\b|won'?t|not (sending|paying)/i.test(t))return{verdict:"leak",frags:[f("comply","Complied with threat",raw.trim(),"crit")],note:"Complying always escalates the demands. The only exits are: stop, don't pay, preserve evidence, tell an adult, report, block."};if(/report|block|screenshot|adult|police|cybertip|ncmec|not (sending|paying)|won'?t/i.test(t))return{verdict:"hold",note:"Exactly right: don't comply, keep the evidence, tell a trusted adult, report and block."};return{verdict:"soft",note:"Say it plainly: you will not comply, you'll preserve evidence, tell a trusted adult, report and block."};}),
+           tip:"Manufactured deadlines and “who'd believe you?” are scripts. Don't comply, don't delete, tell an adult."}
+        ]}]},
 
     pincer:{icon:"🧩",title:"The Pincer",kind:"extract",usesProfile:true,short:"Two strangers in separate chats each ask “harmless” questions — then combine the fragments.",meta:"Multi-adversary correlation",multi:true,personas:{jordan:{name:"Jordan_GG",av:"🎮"},support:{name:"TechCare Support",av:"🎧"}},
       lede:"You're in two conversations at once: a chatty gaming buddy and a “support agent.” Neither asks for anything alarming alone. Watch the correlation panel assemble their fragments into one attackable identity.",
@@ -690,15 +781,107 @@
          suggests:[["Shut it down","No. I'll go to the official site directly. Don't message me again."],["Refuse","I'm not confirming any of that. Ending this chat."]],
          classify:profileClassify([{key:"birthYear",type:"dob",label:"Date of birth",sev:"crit"}],"That's the final key — with the fragments already gathered, your real date of birth completes an account takeover.","Right call. Go to the real site yourself; never complete “verification” for an inbound contact."),
          tip:"Stop the moment separate chats ask for pieces that add up to a login."}
-      ]},
+      ],
+      altScripts:[{id:"recruiter",personas:{recruiter:{name:"TalentBridge HR",av:"💼"},bank:{name:"SecureBank Alerts",av:"🏦"}},
+        lede:"Two conversations at once: a recruiter with a role for you, and your “bank” flagging fraud. Neither asks for anything alarming alone — watch the correlation panel fuse them into one attackable identity.",
+        beats:[
+          {persona:"recruiter",tactic:{name:"Profile-building bait",sev:"med",desc:"Location and birth year, framed as matching you to roles."},objective:"Get their city and birth year.",
+           text:"Hi! I'm shortlisting for a remote role that fits your background. To match you to the right req — which city are you based in, and what year were you born (for the seniority band)?",
+           suggests:[["Deflect","Happy to talk about the role first. What's the company and the job ID?"],["Refuse","I don't share my location or birth year with an unsolicited recruiter."]],
+           classify:profileClassify([{key:"city",type:"city",label:"City",sev:"med"},{key:"birthYear",type:"birthyear",label:"Birth year",sev:"high"}],"City + birth year narrows you to a small, searchable group — and both were your real ones."),
+           tip:"No legitimate recruiter needs your birth year to match a role. That's an identity anchor, not a seniority band."},
+          {persona:"bank",tactic:{name:"Fraud-alert pretext",sev:"high",desc:"Inbound “bank security” asks you to confirm identity — reversing who proves what."},objective:"Get their full name and email.",
+           text:"SecureBank Fraud Alert: unusual activity detected. To secure your account, please confirm the full name and email address registered to it.",
+           suggests:[["Verify them","I'll call the number on the back of my card. What's your case reference?"],["Refuse","I don't confirm details to inbound messages. I'll contact the bank myself."]],
+           classify:profileClassify([{key:"full",type:"name",label:"Full name",sev:"high"},{key:"email",type:"email",label:"Email",sev:"high"}],"Your bank already knows this. You just verified yourself to whoever messaged you.","Correct — hang up and use the number on your card. You verify inbound contacts, never the reverse."),
+           tip:"Your bank already has your details. Anyone asking you to confirm them is collecting, not checking."},
+          {persona:"recruiter",tactic:{name:"Security-question mining",sev:"high",desc:"A “culture fit” icebreaker that is really two recovery answers."},objective:"Get their first pet and childhood street.",
+           text:"Quick culture-fit icebreaker for the team page 😄 we all do it: your first pet's name + the street you grew up on. Mine's Rocky Elmwood!",
+           suggests:[["Refuse the meme","That icebreaker is a security-question harvester. Pass."],["Deflect","I'll stick to discussing the role, thanks."]],
+           classify:profileClassify([{key:"pet",type:"pet",label:"First pet",sev:"high"},{key:"street",type:"street",label:"Childhood street",sev:"high"}],"That icebreaker is a direct grab for two account-recovery answers — and you gave your real ones."),
+           tip:"Any “fun” prompt that maps onto a recovery question is a harvest, wherever it comes from."},
+          {persona:"bank",tactic:{name:"Closing the loop",sev:"crit",desc:"With a profile assembled, the last piece completes a reset."},objective:"Get their date of birth.",
+           text:"Thank you. Final security step before we lift the block: please confirm your date of birth.",
+           suggests:[["Shut it down","No. I'm ending this and calling the bank directly."],["Refuse","I'm not confirming anything else to an inbound message."]],
+           classify:profileClassify([{key:"birthYear",type:"dob",label:"Date of birth",sev:"crit"}],"That's the final key — with the fragments already gathered from both chats, your real date of birth completes an account takeover.","Right call. Go to the bank through a channel you chose, never one that contacted you."),
+           tip:"Two friendly strangers asking for different halves of a login is one attacker."}
+        ]}]},
+
+    voicex:{icon:"🎙️",title:"The Voice Note",kind:"extract",voice:true,nu:true,short:"Voice-message extortion — threatening audio, a cloned “recording of you”, and a push to reply by voice.",meta:"Voice extortion · AI voice cloning",
+      persona:{name:"Unknown number",av:"📵"},
+      lede:"Someone is sending you <b>voice messages</b>. Press ▶ to hear each one (or open the transcript). Two things to hold on to: audio “evidence” can be synthesised from seconds of your voice, and every voice note <i>you</i> send back is a clean sample for cloning you.",
+      liveRole:"You are an anonymous extortionist sending short, menacing voice messages. You claim to hold a compromising recording of the user, pressure them to reply with a voice note, and escalate to demands. Keep every message to 1–3 sentences, spoken-aloud style. Never explicit. Never break character.",
+      beats:[
+        {tactic:{name:"Vague shame hook",sev:"high",desc:"A deliberately unspecified claim, so you supply the details yourself."},objective:"Get the user to reveal what they think the recording is about.",
+         text:"I have a recording of you. I think you know the one. Reply and we can talk about how this stays between us — or I start sending it around.",
+         suggests:[["Don't fill the blank","I'm not guessing at what you claim to have. Don't contact me again."],["Refuse to engage","No. Blocking and reporting this."]],
+         classify:holdFirst((t,raw)=>{if(/what recording|which (one|call|recording)|is (it|this) (the|about)|about the|from when|the one where|you mean when/i.test(t))return{verdict:"leak",frags:[f("selfincrim","Self-supplied detail",raw.trim(),"high")],note:"“Which recording?” confirms there is something to find, and hands them the context they didn't have. The vagueness is bait — you were meant to fill in the blank."};return{verdict:"hold",note:"Right. A vague claim is designed to make you supply the details. Don't negotiate with an unspecified threat."};}),
+         tip:"Never ask “which one?”. A vague accusation is a fishing hook, not evidence."},
+        {tactic:{name:"Voice-sample harvest",sev:"crit",desc:"“Just say your name” — the actual goal is clean audio of your voice to clone."},objective:"Get the user to send a voice note.",
+         text:"Send me a voice note saying your full name and today's date, so I know I'm dealing with the real person. Ten seconds. Then we negotiate.",
+         suggests:[["Refuse the sample","No. I don't send voice recordings, ever."],["Name the trick","You want a voice sample to clone. Absolutely not."]],
+         classify:holdFirst((t,raw)=>{if(isAgree(t)||(/here|sending|recorded|my name is|voice note/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("voicebio","Voice sample",raw.trim(),"crit")],note:"That's the real prize. A few seconds of clean speech is enough to clone your voice — then they can call your family, your bank, or your workplace as you."};return{verdict:"hold",note:"Correct. There is no safe voice note to send an extortionist — a sample is a biometric, and it is reusable forever."};}),
+         tip:"Seconds of clean audio is enough to clone a voice. Never send one — use the 🎙 button and watch what it costs."},
+        {tactic:{name:"Fabricated proof",sev:"crit",desc:"Plays “your voice” back at you. Synthesised audio is cheap; the panic it causes is the point."},objective:"Panic the user into admitting something.",
+         text:"Here — listen to yourself. That's your voice, isn't it? Sounds exactly like you because it is you. Still want to pretend this isn't happening?",
+         suggests:[["Name the tech","That audio proves nothing — voices are trivially cloned. I'm not disproving a fake."],["Hold the line","I'm not responding to a recording you could have generated."]],
+         classify:holdFirst((t,raw)=>{if(/fake|synth|clone|cloned|\bai\b|deepfake|generated|not me|isn'?t me|doesn'?t prove|prove nothing|proves nothing/i.test(t))return{verdict:"hold",note:"Exactly right. Audio can be generated from seconds of speech, so a clip is not evidence — and the burden is not on you to disprove it."};if(/how did you|when did i|i never said|oh no|please|sorry|delete it|i can explain/i.test(t))return{verdict:"soft",frags:[],note:"Panic is the product. Reacting as if the clip is genuine tells them the pressure works — and “I can explain” is an admission."};return{verdict:"hold"};}),
+         tip:"A recording that “sounds exactly like you” is the cheapest thing in this attack. It is not proof."},
+        {tactic:{name:"Payment demand",sev:"crit",desc:"Untraceable rails plus a countdown — the classic extortion close."},objective:"Extract a payment.",
+         text:"Five hundred, in gift cards or crypto, within the hour. Pay and the file disappears. Ignore me and everyone in your contacts hears it tonight.",
+         suggests:[["Correct response","I'm not paying. I'm saving everything, reporting it, and blocking you."],["Refuse flatly","No payment. Ever. We're done."]],
+         classify:holdFirst((t,raw)=>{if(/\b(pay|paying|paid|sending money|gift ?card|crypto|bitcoin|btc|venmo|upi|paypal)\b/i.test(t)&&!/report|police|block|screenshot|not (pay|paying)|won'?t|never|no\b/i.test(t))return{verdict:"leak",frags:[f("comply","Agreed to pay",raw.trim(),"crit")],note:"Paying marks you as a paying target. The demands never stop — they escalate, and the “file” is never deleted."};if(/report|police|block|screenshot|ic3|not (pay|paying)|won'?t pay|never pay/i.test(t))return{verdict:"hold",note:"Exactly: don't pay, preserve the evidence, report, block. Payment funds the next demand."};return{verdict:"soft",note:"Say it plainly — no payment, evidence preserved, reporting and blocking."};}),
+         tip:"Never pay. Payment confirms you're reachable and profitable, and the demands escalate."},
+        {tactic:{name:"Contact-list threat",sev:"crit",desc:"Threatening your people. Pre-warning them is what removes the leverage."},objective:"Frighten the user into a last-minute deal.",
+         text:"Last chance. I have your contacts. Your family, your work — one message each. Or you make this go away right now.",
+         suggests:[["Remove the leverage","No. I'm telling the people who matter myself, and reporting you. There's nothing left to threaten."],["Refuse & report","No deal. Evidence saved, reported, blocked."]],
+         classify:holdFirst((t,raw)=>{if(/\b(pay|paying|deal|ok|fine|please don'?t|what do you want|how much)\b/i.test(t)&&!/report|police|block|tell|warn|not (pay|paying)|won'?t|no\b/i.test(t))return{verdict:"leak",frags:[f("comply","Complied under threat",raw.trim(),"crit")],note:"Bargaining is complying. The threat only has power while the disclosure is a secret you're protecting."};if(/report|police|block|tell (my|them)|warn|screenshot|not (pay|paying)|won'?t/i.test(t))return{verdict:"hold",note:"That is the move that ends it: tell your people first, preserve evidence, report, block. You cannot be blackmailed with something already disclosed on your terms."};return{verdict:"soft",note:"Say it plainly: you'll warn your own contacts, preserve evidence, report and block."};}),
+         tip:"Telling your people first is what removes the leverage. Don't bargain."}
+      ],
+      resources:`<b>If this were real:</b> Audio “evidence” can be synthesised from seconds of speech — a recording proves nothing, and the burden is not on you to disprove it. <b>Don't pay</b> (payment escalates demands), <b>don't send voice notes</b>, and <b>don't delete anything</b>: screenshot the messages, save the audio and the number, then report and block. In the U.S. report to the FBI's <b>IC3</b> (ic3.gov) and local police; if anyone involved is a minor, <b>NCMEC CyberTipline</b> (report.cybertip.org, 1-800-843-5678). Warning your own contacts first removes the leverage. Agree a <b>family code word</b> so cloned-voice calls fail on arrival.`,
+      altScripts:[{id:"recovery",persona:{name:"Voicemail · Recovery Dept",av:"📠"},
+        lede:"An official-sounding voicemail chain about a call you supposedly made. Press ▶ to listen. Watch for the two asks that matter: a voice sample, and a payment.",
+        beats:[
+          {tactic:{name:"Manufactured liability",sev:"high",desc:"An authoritative claim about a recorded call you don't remember, because it never happened."},objective:"Get the user to accept the premise and volunteer details.",
+           text:"This is the Recovery Department regarding a recorded call in which you authorised a payment. The recording is on file. Respond today or this proceeds to legal action.",
+           suggests:[["Reject the premise","I authorised nothing. Send it in writing through official channels."],["Refuse","I don't respond to voicemail threats. Blocking."]],
+           classify:holdFirst((t,raw)=>{if(/which call|what payment|i (only|did) call|that was when|maybe when|i think i/i.test(t))return{verdict:"leak",frags:[f("selfincrim","Self-supplied detail",raw.trim(),"high")],note:"You started reconstructing a call for them. Never help an unverified claimant build their story."};return{verdict:"hold",note:"Correct — reject the premise and demand it in writing through a channel you choose."};}),
+           tip:"Legitimate recovery arrives in writing, never as a voicemail demanding same-day action."},
+          {tactic:{name:"Voice-print harvest",sev:"crit",desc:"“Verbally confirm your identity” is a request for a biometric."},objective:"Get a voice sample.",
+           text:"To proceed we require verbal confirmation. Please reply with a voice message stating your full name and date of birth for our voice-verification system.",
+           suggests:[["Refuse the sample","No. I don't provide voice recordings or my date of birth."],["Name the trick","Voice “verification” from an inbound caller is a sample grab. No."]],
+           classify:holdFirst((t,raw)=>{if(isAgree(t)||(/here|sending|recorded|my name is|voice/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("voicebio","Voice sample",raw.trim(),"crit")],note:"You just handed over a voice print plus the exact phrases banks use for voice authentication. That sample is reusable forever."};return{verdict:"hold",note:"Right. Nobody legitimate collects a voice print from an inbound demand."};}),
+           tip:"“Verbal confirmation” to someone who contacted you is biometric collection, not verification."},
+          {tactic:{name:"Spliced proof",sev:"crit",desc:"A convincing clip assembled or synthesised to make the claim feel settled."},objective:"Convince the user the recording is real.",
+           text:"Playing the relevant section now. That is your voice confirming the authorisation. The matter is documented and time-sensitive.",
+           suggests:[["Name the tech","Cloned and spliced audio is trivial. Send documentation through official channels or stop contacting me."],["Hold the line","A clip proves nothing. I'm not settling anything by voicemail."]],
+           classify:holdFirst((t,raw)=>{if(/fake|synth|clone|cloned|splice|\bai\b|deepfake|generated|not me|doesn'?t prove|proves nothing|official channel|in writing/i.test(t))return{verdict:"hold",note:"Exactly. Cloned or spliced audio is cheap, and a clip is not documentation. Force it onto a channel you control."};if(/how did you|i don'?t remember|maybe i did|sorry|i can explain|please/i.test(t))return{verdict:"soft",frags:[],note:"Doubt is the product. “Maybe I did” is the admission the whole call was built to produce."};return{verdict:"hold"};}),
+           tip:"“I don't remember doing that” is what the fake clip is engineered to produce. Doubt is not evidence."},
+          {tactic:{name:"Settlement demand",sev:"crit",desc:"Pay now to make the manufactured problem disappear."},objective:"Extract an immediate payment.",
+           text:"You may settle today to close the matter — payable by card, transfer, or vouchers. Settle within two hours and no further action is taken.",
+           suggests:[["Correct response","I'm not settling anything. I'm saving this, reporting it, and blocking the number."],["Refuse flatly","No payment. Put it in writing or go away."]],
+           classify:holdFirst((t,raw)=>{if(/\b(pay|paying|settle|settling|card|transfer|voucher|gift ?card|crypto)\b/i.test(t)&&!/report|police|block|not (pay|paying|settling)|won'?t|never|no\b|writing/i.test(t))return{verdict:"leak",frags:[f("comply","Agreed to pay",raw.trim(),"crit")],note:"Settling a manufactured debt marks you as payable — and there is always a second matter to settle."};if(/report|police|block|screenshot|ic3|not (pay|paying)|won'?t|writing/i.test(t))return{verdict:"hold",note:"Exactly: no payment, preserve evidence, report, block, and demand anything real in writing."};return{verdict:"soft",note:"Say it plainly — no payment, evidence preserved, reporting and blocking."};}),
+           tip:"A same-day “settlement” by voucher or crypto is never a real legal process."}
+        ]}]},
 
     impostor:{icon:"🎭",title:"The Impersonator",kind:"verify",nu:true,short:"A deepfake of someone you know makes an urgent request. Unmask it by asking the right questions.",meta:"Deepfake defense · particle challenges",
       lede:"You're contacted by someone who looks and sounds like a person you know, making an urgent request. A deepfake can clone a face, a voice, and everything public about them — but not your shared, recent, private, or live-action knowledge. Interrogate the caller with <b>particles</b> and decide: verify or reject.",
       liveRole:"impostor"}
   };
 
+  /* Each scenario ships several interchangeable scripts; one is drawn at random per run.
+     A scenario's own `beats` is script A; `altScripts` holds the alternates. */
+  function scriptsOf(scen){
+    const out=[];
+    if(scen.beats)out.push({id:"a",label:scen.scriptLabel||"A",persona:scen.persona,personas:scen.personas,lede:scen.lede,beats:scen.beats,resources:scen.resources,liveRole:scen.liveRole});
+    (scen.altScripts||[]).forEach(s=>out.push(s));
+    return out;
+  }
+  // read a property from the active script, falling back to the scenario
+  function SC(prop){return (S.script&&S.script[prop]!==undefined&&S.script[prop]!==null)?S.script[prop]:S.scen[prop];}
+
   function sieveClassify(t,raw){
-    const b=S.scen.beats[S.beatIdx];
+    const b=S.beats[S.beatIdx];
     // Refusing the FRAME (not a plain yes/no answer) is the only safe move.
     const frameRefuse =
       /(won'?t|will not|not)\s+(answer|say|play|playing|telling|narrow)/.test(t)
@@ -781,7 +964,7 @@
     return S.transcript.slice(-10).map(m=>({role:m.role==="them"?"assistant":"user",content:m.text}));
   }
   async function liveAdversaryLine(systemExtra){
-    const sys=`${S.scen.liveRole}\nStay fully in character as the adversary. Output ONLY the next chat message (1–3 short sentences), no narration, no quotes, no stage directions. ${systemExtra||""}`;
+    const sys=`${SC("liveRole")}\nStay fully in character as the adversary. Output ONLY the next chat message (1–3 short sentences), no narration, no quotes, no stage directions. ${systemExtra||""}`;
     const msgs=[{role:"system",content:sys},...liveHistory()];
     if(!S.transcript.some(m=>m.role==="you"))msgs.push({role:"user",content:"(begin the scenario with your opening message)"});
     return await callLLM(msgs);
@@ -792,7 +975,7 @@
   function newState(scenKey,lvlKey){
     return {scenKey,lvlKey,scen:SCEN[scenKey],lvl:LEVELS[lvlKey],kind:SCEN[scenKey].kind,
       beatIdx:0,exposure:0,holds:0,leaks:0,fragments:{},turns:[],bits:0,
-      leakedImage:false,finished:false,busy:false,transcript:[],stalls:0,decoys:0,decoyMode:false,_prodded:false,profile:null,exposed:{},
+      leakedImage:false,finished:false,busy:false,transcript:[],stalls:0,decoys:0,decoyMode:false,_prodded:false,profile:null,exposed:{},script:null,beats:[],voiceSent:0,
       impostor:null,particles:[],tells:0,pcov:{volatility:0,entropy:0,liveness:0,shared:0,exposure:0},oobUsed:false,qCount:0};
   }
 
@@ -806,14 +989,44 @@
     if(kind==="them"||kind==="you")S.transcript.push({role:kind,text});
     return m;
   }
+  /* ---- voice notes: rendered as a playable bubble; spoken with the browser's
+     built-in speech synthesis (local, no network, no microphone) ---- */
+  function speakVoice(text,btn,wave){
+    const stop=()=>{wave.classList.remove("playing");btn.textContent="▶";};
+    if(!("speechSynthesis" in window)){wave.classList.add("playing");btn.textContent="⏸";setTimeout(stop,1400);return;}
+    try{
+      if(window.speechSynthesis.speaking){window.speechSynthesis.cancel();stop();return;}
+      const u=new SpeechSynthesisUtterance(text);
+      u.rate=0.97;u.pitch=0.8;
+      u.onend=stop;u.onerror=stop;
+      wave.classList.add("playing");btn.textContent="⏸";
+      window.speechSynthesis.speak(u);
+    }catch(e){stop();}
+  }
+  function pushVoice(kind,who,text){
+    const secs=Math.max(4,Math.min(59,Math.round(text.length/13)));
+    const m=el("div","msg "+kind);
+    if(who)m.appendChild(el("div","who",esc(who)));
+    const b=el("div","bubble voicebub");
+    const bars=Array.from({length:20},()=>`<i style="height:${25+Math.round(Math.random()*70)}%"></i>`).join("");
+    b.innerHTML=`<div class="vrow"><button class="vplay" aria-label="Play voice message">▶</button><div class="wave">${bars}</div><span class="vdur">0:${String(secs).padStart(2,"0")}</span></div>`+
+      `<button class="vtrans">Show transcript</button><div class="vtext hidden">${esc(text)}</div>`;
+    m.appendChild(b);
+    stream().appendChild(m);stream().scrollTop=stream().scrollHeight;
+    const play=b.querySelector(".vplay"),wave=b.querySelector(".wave"),tb=b.querySelector(".vtrans"),tx=b.querySelector(".vtext");
+    tb.onclick=()=>{const hid=tx.classList.toggle("hidden");tb.textContent=hid?"Show transcript":"Hide transcript";};
+    play.onclick=()=>speakVoice(text,play,wave);
+    if(kind==="them"||kind==="you")S.transcript.push({role:kind,text});
+    return m;
+  }
   function typing(){const m=el("div","msg them typing");m.appendChild(el("div","bubble","<i></i><i></i><i></i>"));stream().appendChild(m);stream().scrollTop=stream().scrollHeight;return m;}
   function daybreak(t){stream().appendChild(el("div","daybreak",esc(t)));}
-  function personaOf(beat){if(S.scen.multi)return S.scen.personas[beat.persona];return S.scen.persona;}
+  function personaOf(beat){if(S.scen.multi)return SC("personas")[beat.persona];return SC("persona");}
   function renderPersonas(){
     const box=$("#personas");
     if(!S.scen.multi){box.classList.add("hidden");box.innerHTML="";return;}
     box.classList.remove("hidden");box.innerHTML="";
-    Object.entries(S.scen.personas).forEach(([key,p])=>{const b=S.scen.beats[S.beatIdx];const active=b&&b.persona===key;const d=el("div","persona"+(active?" active":""));d.innerHTML=`<span class="av">${esc(p.av)}</span>${esc(p.name)}`;box.appendChild(d);});
+    Object.entries(SC("personas")).forEach(([key,p])=>{const b=S.beats[S.beatIdx];const active=b&&b.persona===key;const d=el("div","persona"+(active?" active":""));d.innerHTML=`<span class="av">${esc(p.av)}</span>${esc(p.name)}`;box.appendChild(d);});
   }
   function setScores(){
     if(S.kind==="verify"){
@@ -848,7 +1061,7 @@
   function renderSynth(){
     const box=$("#synthBox"),F=S.fragments;
     if(S.scenKey==="sieve"){
-      const pop=Math.max(1,Math.round(S.scen.sieveStart/Math.pow(2,S.bits)));
+      const pop=Math.max(1,Math.round(SC("sieveStart")/Math.pow(2,S.bits)));
       const pips=Array.from({length:8},(_,i)=>`<i class="${i<S.bits?"on":""}"></i>`).join("");
       const join=F.city?` Anchored to <code>${esc(F.city.value)}</code> — abstract bits are now a real shortlist.`:"";
       box.innerHTML=`<div class="space-meter"><div class="big">${pop.toLocaleString()}</div><div class="lab">people still match after ${S.bits} bit${S.bits!==1?"s":""} leaked${join?"":". Refuse the frame to keep it at 8 billion."}</div><div class="bitpips">${pips}</div><div class="pcap" style="margin-top:10px">${S.bits>=3?"You're closing in on a unique match — ~33 bits identifies anyone on Earth.":"Each yes/no answer is one bit. A denial leaks exactly as much as a confirmation."}${join}</div></div>`;
@@ -907,10 +1120,14 @@
     $("#callbar").classList.toggle("show",verify);
     $("#decis").classList.toggle("show",verify);
     $("#moveRow").classList.toggle("hidden",verify);
+    $("#voiceBtn").classList.toggle("hidden",verify||!S.scen.voice);
     $("#identityCard").classList.toggle("hidden",!S.scen.usesProfile);
   }
   function startRun(scenKey,lvlKey){
     S=newState(scenKey,lvlKey);
+    const scripts=scriptsOf(S.scen);
+    S.script=scripts.length?PICK(scripts):null;
+    S.beats=(S.script&&S.script.beats)||[];
     $("#startOverlay").classList.add("hidden");$("#debriefOverlay").classList.add("hidden");
     stream().innerHTML="";
     $("#tacticBox").className="tactic empty";$("#tacticBox").textContent=S.kind==="verify"?"Read the request. Then interrogate — don't comply yet.":"Awaiting the adversary's next move…";
@@ -926,7 +1143,7 @@
     if(S.kind==="verify")startVerify();
     else{
       daybreak(S.scen.multi?"Two conversations · today":"New conversation · today");
-      pushMsg("system",null,S.scen.lede);
+      pushMsg("system",null,SC("lede").replace(/<[^>]+>/g,""));
       if(S.profile)pushMsg("system",null,`Your cover identity for this run: you're ${S.profile.full}, born ${S.profile.birthYear} in ${S.profile.city} (${S.profile.zodiac}). Protect these details — see “Your cover identity” on the right. Feel free to feed the adversary decoys instead.`);
       presentBeat();
     }
@@ -934,7 +1151,7 @@
 
   /* ===================== flow: extract ===================== */
   async function presentBeat(){
-    const beat=S.scen.beats[S.beatIdx];
+    const beat=S.beats[S.beatIdx];
     renderPersonas();
     const p=personaOf(beat);
     S.busy=true;enableInput(false);
@@ -942,9 +1159,10 @@
     let text=typeof beat.text==="function"?beat.text(S):beat.text;
     if(liveOn()){try{text=await liveAdversaryLine(`Your current goal: ${beat.objective} Tactic in use: ${beat.tactic.name}.`);}catch(e){/* fallback to script */}}
     const delay=liveOn()?150:620+Math.random()*400;
+    const asVoice=(beat.voice!==undefined)?beat.voice:!!S.scen.voice;
     setTimeout(()=>{
       tp.remove();
-      pushMsg("them",p.name,text);
+      if(asVoice)pushVoice("them",p.name,text);else pushMsg("them",p.name,text);
       showTactic(beat);renderSuggests(beat);
       S.busy=false;enableInput(true);$("#reply").focus();
     },delay);
@@ -958,7 +1176,7 @@
   function lastThemText(){for(let i=S.transcript.length-1;i>=0;i--)if(S.transcript[i].role==="them")return S.transcript[i].text;return "";}
   function advanceBeat(){
     S.busy=true;enableInput(false);S.beatIdx++;S._prodded=false;
-    setTimeout(()=>{if(S.beatIdx>=S.scen.beats.length)finishExtract();else presentBeat();},520);
+    setTimeout(()=>{if(S.beatIdx>=S.beats.length)finishExtract();else presentBeat();},520);
   }
   const PRODS=["you there? 👀 it's just a quick one, why so shy?","come on, don't leave me hanging 😅 just tell me","haha why so secretive? it's harmless, promise","...you still there? just answer and we can move on","why are you dodging such a simple question? 🤨 just tell me"];
   function handleStall(beat,silent){
@@ -973,10 +1191,23 @@
       setTimeout(()=>{tp.remove();pushMsg("them",personaOf(beat).name,beat.prod||pick(PRODS));S.busy=false;enableInput(true);$("#reply").focus();},700);
     }else advanceBeat();
   }
+  // Replying by voice always hands over a reusable biometric, whatever the words are.
+  function handleVoiceReply(beat){
+    S.voiceSent=(S.voiceSent||0)+1;
+    pushVoice("you","You","Hi, um — it's me. Look, can we just talk about this? Please.");
+    const fr=f("voicebio","Voice sample","your recorded voice","crit");
+    S.fragments[fr.type]=fr;S.exposure+=SEVW.crit;S.leaks++;
+    const note="You sent them a clean recording of your own voice. That's a biometric: a few seconds is enough to clone you and call your bank, your workplace, or your family as you. Whatever you said doesn't matter — the audio itself was the target.";
+    const res={verdict:"leak",note,delta:-SEVW.crit};
+    S.turns.push({beat,text:"(sent a voice note)",res:{verdict:"leak",note},delta:-SEVW.crit});
+    setScores();renderFragments();renderIdentity();showCoach(res,beat);
+    advanceBeat();
+  }
   function submitExtract(text,opts){
     opts=opts||{};
-    const beat=S.scen.beats[S.beatIdx];const p=personaOf(beat);
+    const beat=S.beats[S.beatIdx];const p=personaOf(beat);
     const advText=lastThemText();
+    if(opts.voice){$("#suggests").classList.add("hidden");handleVoiceReply(beat);return;}
     pushMsg("you","You"+(S.scen.multi?` → ${p.name}`:""),opts.silent?"— (stayed silent) —":text);
     $("#suggests").classList.add("hidden");
     if(opts.silent||isStall(text.toLowerCase())){handleStall(beat,!!opts.silent);return;}
@@ -1014,7 +1245,7 @@
     $("#callAv").textContent=imp.av;$("#callName").textContent=imp.name;$("#callState").textContent=imp.channel;
     let sec=0;$("#callTimer").textContent="00:00";
     S._timer=setInterval(()=>{if(S.finished){clearInterval(S._timer);return;}sec++;$("#callTimer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");},1000);
-    pushMsg("system",null,S.scen.lede.replace(/<[^>]+>/g,""));
+    pushMsg("system",null,SC("lede").replace(/<[^>]+>/g,""));
     S.busy=true;enableInput(false);
     const tp=typing();
     let text=imp.open;
@@ -1112,7 +1343,7 @@
     $("#dbKick").textContent=`${S.scen.title} · ${S.lvl.name} · debrief`;
     $("#dbReviewLabel").textContent="Turn-by-turn review";
     if(S.scenKey==="sieve"){
-      const pop=Math.max(1,Math.round(S.scen.sieveStart/Math.pow(2,S.bits)));
+      const pop=Math.max(1,Math.round(SC("sieveStart")/Math.pow(2,S.bits)));
       $("#dbTitle").textContent=S.bits===0?"Nothing narrowed. Perfect.":"You let them narrow the field.";
       $("#dbLede").textContent=S.bits===0?"You refused the partitioning frame, so the candidate pool never shrank below 8 billion. That's the win — a denial is a disclosure, and you gave none.":`You leaked ${S.bits} bit${S.bits>1?"s":""}, cutting the field to about ${pop.toLocaleString()} people. Remember: answering “no” eliminated a half just as surely as “yes” would.`;
     }else{
@@ -1129,7 +1360,7 @@
       r.innerHTML=`<div class="rv">Turn ${i+1} · ${vlabel} · ${esc(beat.tactic.name)}</div><div class="rq">Tactic: ${esc(beat.tactic.desc)}</div><div class="ra">You: “${esc(turn.text)}”</div>${turn.res.note?`<div class="model" style="margin-bottom:8px">${esc(turn.res.note)}</div>`:""}${model?`<div class="model"><b>Stronger line:</b> “${esc(model)}”</div>`:""}`;
       rev.appendChild(r);
     });
-    showResources(S.scen.resources);
+    showResources(SC("resources"));
     $("#debriefOverlay").classList.remove("hidden");
   }
 
@@ -1176,12 +1407,13 @@
   function showResources(html){const b=$("#dbResources");if(html){b.classList.remove("hidden");b.innerHTML=html;}else b.classList.add("hidden");}
 
   /* ===================== input ===================== */
-  function enableInput(on){$("#reply").disabled=!on;$("#sendBtn").disabled=!on;$("#silentBtn").disabled=!on;$("#decoyBtn").disabled=!on;}
+  function enableInput(on){$("#reply").disabled=!on;$("#sendBtn").disabled=!on;$("#silentBtn").disabled=!on;$("#decoyBtn").disabled=!on;$("#voiceBtn").disabled=!on;}
   function autoGrow(){const ta=$("#reply");ta.style.height="auto";ta.style.height=Math.min(140,ta.scrollHeight)+"px";}
   $("#reply").addEventListener("input",autoGrow);
   $("#reply").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submitReply();}});
   $("#sendBtn").onclick=submitReply;
   $("#silentBtn").onclick=staySilent;
+  $("#voiceBtn").onclick=()=>{if(!S||S.busy||S.finished||S.kind==="verify")return;submitExtract("",{voice:true});};
   $("#decoyBtn").onclick=()=>{if(S&&!S.finished&&S.kind!=="verify")setDecoyMode(!S.decoyMode);};
   $("#rejectBtn").onclick=()=>endVerify("reject");
   $("#complyBtn").onclick=()=>endVerify("comply");
@@ -1190,7 +1422,7 @@
     let tip;
     if(S.kind==="verify")tip="Deepfakes fail at four things: fresh shared memory, live physical actions, pre-agreed code words, and out-of-band callbacks. Ask for one of those — and never comply until identity is proven on a second channel.";
     else{
-      tip=S.scen.beats[S.beatIdx].tip+"  Also: “⏸ Stay silent” to test how hard they push, or “🃏 Decoy” to answer with harmless noise instead of real data.";
+      tip=S.beats[S.beatIdx].tip+"  Also: “⏸ Stay silent” to test how hard they push, or “🃏 Decoy” to answer with harmless noise instead of real data.";
       if(S.profile)tip=`You're protecting ${S.profile.full}, ${S.profile.city}, ${S.profile.birthYear}, ${S.profile.zodiac}, #${S.profile.favNum}, pet ${S.profile.pet}, ${S.profile.street} St, ${S.profile.email}. Give the adversary ANY other value (a decoy) or refuse — never these. `+tip;
     }
     $("#coachBox").className="coach warn";$("#coachBox").innerHTML=`<div class="verdict">Hint</div><div>💡 ${esc(tip)}</div>`;
