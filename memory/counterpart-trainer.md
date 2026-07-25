@@ -58,3 +58,13 @@ browser's built-in `speechSynthesis` — local, no network, no microphone. A "�
 button simulates replying by voice and ALWAYS scores a critical `voicebio` leak: the lesson is
 that seconds of clean audio is a cloneable biometric, regardless of what you said. Teaches that
 audio "evidence" is synthesisable and proves nothing.
+
+**Client-side LLM gateway (hardened):** live mode talks DIRECTLY to any OpenAI-compatible
+endpoint from the browser (`callLLM`, no server). Now supports SSE streaming (`readSSE` +
+`streamInto`/`pushMsgLive` render tokens into the bubble), custom headers (JSON, merged via
+`llmHeaders` — for Azure `api-key`, OpenRouter referer, etc.), a stream on/off toggle, and
+model discovery (`fetchModels` → `<base>/models`, populates a datalist). Presets: openai,
+anthropic, openrouter, groq, together, fabric, nrp, ollama, litellm. Scoring stays
+deterministic/local — the model only supplies adversary wording. Verified end-to-end against a
+local mock OpenAI server (streaming, auth, custom-header echo, /models). A published artifact
+still can't reach external endpoints (CORS), so it falls back to scripted.

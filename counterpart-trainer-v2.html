@@ -400,33 +400,47 @@
     <div class="modal-body">
       <div class="toggle" id="liveToggle"><div class="sw"></div><div class="tl">Enable live adversary</div></div>
       <div class="warnbox">
-        <b>Read before enabling.</b> Live mode sends the conversation to the endpoint you configure below — so your typed messages leave the browser. Use a test persona, never real personal data. A <b>published artifact cannot reach external endpoints</b> (browser security blocks it), so live mode only works when you open this file locally (or from your own server). If a call fails, the scenario silently falls back to the script.
+        <b>Read before enabling.</b> The browser talks <b>directly</b> to your gateway — the request goes client-side to <span class="mono">&lt;endpoint&gt;/chat/completions</span>, no server of ours in between. Your typed messages leave the browser to reach that endpoint, so use a test persona, never real personal data. <b>Scoring always stays local and deterministic</b> — the model only voices the adversary's words. A <b>published artifact cannot reach external endpoints</b> (browser security blocks cross-origin calls), so live mode works when you open this file locally or from your own host. If a call fails, the scenario silently falls back to the script.
       </div>
       <div class="field">
-        <label>Preset</label>
+        <label>Gateway preset</label>
         <select id="presetSel">
           <option value="custom">Custom / OpenAI-compatible</option>
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic (OpenAI-compat)</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="groq">Groq</option>
+          <option value="together">Together AI</option>
           <option value="fabric">FABRIC AI</option>
           <option value="nrp">NRP (Nautilus)</option>
           <option value="ollama">Local Ollama</option>
+          <option value="litellm">LiteLLM proxy (localhost)</option>
         </select>
       </div>
       <div class="field">
         <label>Endpoint (OpenAI chat-completions base)</label>
         <input id="endpointInp" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false"/>
-        <span class="help">The app POSTs to <span class="mono">&lt;base&gt;/chat/completions</span>.</span>
+        <span class="help">The app POSTs to <span class="mono">&lt;base&gt;/chat/completions</span> and lists models at <span class="mono">&lt;base&gt;/models</span>. Works with any OpenAI-compatible gateway or proxy (LiteLLM, OpenRouter, vLLM, Ollama…).</span>
       </div>
       <div class="field">
         <label>Model</label>
-        <input id="modelInp" placeholder="gpt-4o-mini / claude-… / llama3.1" autocomplete="off" spellcheck="false"/>
+        <div style="display:flex;gap:8px">
+          <input id="modelInp" list="modelList" placeholder="gpt-4o-mini / claude-… / llama3.1" autocomplete="off" spellcheck="false" style="flex:1"/>
+          <button class="hintbtn" id="fetchModelsBtn" type="button" style="height:auto;border-radius:9px">Fetch models</button>
+        </div>
+        <datalist id="modelList"></datalist>
       </div>
       <div class="field">
         <label>API key</label>
         <input id="keyInp" type="password" placeholder="sk-…  (stored only in this browser)" autocomplete="off"/>
-        <span class="help">Kept in localStorage on this device. Never sent anywhere except your endpoint.</span>
+        <span class="help">Sent as <span class="mono">Authorization: Bearer …</span>. Kept in localStorage on this device; sent only to your endpoint.</span>
       </div>
+      <div class="field">
+        <label>Custom headers (JSON, optional)</label>
+        <input id="headersInp" placeholder='{"HTTP-Referer":"…"}  or Azure: {"api-key":"…"}' autocomplete="off" spellcheck="false"/>
+        <span class="help">Merged into every request. Use for gateways that need extra headers (OpenRouter referer, Azure <span class="mono">api-key</span>, org IDs).</span>
+      </div>
+      <div class="toggle on" id="streamToggle"><div class="sw"></div><div class="tl" style="font-size:13.5px">Stream responses (token by token)</div></div>
       <div class="btnrow">
         <button class="ghost" id="testLiveBtn">Test connection</button>
         <button class="primary" id="saveLiveBtn">Save</button>
@@ -948,26 +962,83 @@
   function setLive(o){localStorage.setItem(LS_KEY,JSON.stringify(o));}
   function liveOn(){const c=getLive();return !!(c.enabled&&c.endpoint&&c.model);}
   function refreshLiveBadge(){const on=liveOn();$("#liveBadge").classList.toggle("on",on);$("#liveTxt").textContent=on?"Live LLM":"Scripted";}
-  async function callLLM(messages,maxTokens){
+  // ---- OpenAI-compatible gateway client (runs entirely in the browser; no server) ----
+  function llmURL(base,suffix){base=(base||"").replace(/\/+$/,"");return base.endsWith(suffix)?base:base+suffix;}
+  function llmHeaders(c){
+    const h={"Content-Type":"application/json"};
+    if(c.key)h["Authorization"]="Bearer "+c.key;
+    if(c.headers){try{Object.assign(h,JSON.parse(c.headers));}catch(e){/* ignore malformed custom headers */}}
+    return h;
+  }
+  async function readSSE(res,onToken){
+    const reader=res.body.getReader(),dec=new TextDecoder();let buf="",full="";
+    for(;;){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let nl;
+      while((nl=buf.indexOf("\n"))>=0){
+        const line=buf.slice(0,nl).replace(/\r$/,"");buf=buf.slice(nl+1);
+        if(!line.startsWith("data:"))continue;
+        const data=line.slice(5).trim();
+        if(data==="[DONE]")continue;
+        try{const j=JSON.parse(data);const d=j.choices?.[0]?.delta?.content||j.choices?.[0]?.text||"";if(d){full+=d;onToken&&onToken(full);}}catch(e){}
+      }
+    }
+    return full.trim();
+  }
+  async function callLLM(messages,opts){
+    opts=opts||{};if(typeof opts==="number")opts={maxTokens:opts};
     const c=getLive();
-    const base=c.endpoint.replace(/\/+$/,"");
-    const url=base.endsWith("/chat/completions")?base:base+"/chat/completions";
-    const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",...(c.key?{"Authorization":"Bearer "+c.key}:{})},
-      body:JSON.stringify({model:c.model,max_tokens:maxTokens||220,temperature:0.9,messages})});
+    const url=llmURL(c.endpoint,"/chat/completions");
+    const wantStream=!!opts.onToken&&c.stream!==false;
+    const body={model:c.model,max_tokens:opts.maxTokens||220,temperature:opts.temperature!=null?opts.temperature:0.9,messages};
+    if(wantStream)body.stream=true;
+    const res=await fetch(url,{method:"POST",headers:llmHeaders(c),body:JSON.stringify(body)});
+    if(!res.ok){let d="";try{d=(await res.text()).slice(0,160);}catch(e){}throw new Error("HTTP "+res.status+(d?" — "+d:""));}
+    if(wantStream&&res.body&&res.body.getReader){const t=await readSSE(res,opts.onToken);if(!t)throw new Error("empty stream");return t;}
+    const j=await res.json();
+    const txt=j.choices?.[0]?.message?.content||j.content?.[0]?.text||j.choices?.[0]?.text||"";
+    if(!txt)throw new Error("empty response");
+    return String(txt).trim();
+  }
+  async function fetchModels(){
+    const c=getLive();
+    const res=await fetch(llmURL(c.endpoint,"/models"),{headers:llmHeaders(c)});
     if(!res.ok)throw new Error("HTTP "+res.status);
     const j=await res.json();
-    const txt=j.choices?.[0]?.message?.content||j.content?.[0]?.text||"";
-    if(!txt)throw new Error("empty");
-    return String(txt).trim();
+    const raw=Array.isArray(j)?j:(j.data||j.models||[]);
+    return raw.map(m=>typeof m==="string"?m:(m.id||m.name)).filter(Boolean);
   }
   function liveHistory(){
     return S.transcript.slice(-10).map(m=>({role:m.role==="them"?"assistant":"user",content:m.text}));
   }
-  async function liveAdversaryLine(systemExtra){
+  async function liveAdversaryLine(systemExtra,onToken){
     const sys=`${SC("liveRole")}\nStay fully in character as the adversary. Output ONLY the next chat message (1–3 short sentences), no narration, no quotes, no stage directions. ${systemExtra||""}`;
     const msgs=[{role:"system",content:sys},...liveHistory()];
     if(!S.transcript.some(m=>m.role==="you"))msgs.push({role:"user",content:"(begin the scenario with your opening message)"});
-    return await callLLM(msgs);
+    return await callLLM(msgs,{onToken});
+  }
+  // a chat bubble that updates as tokens stream in
+  function pushMsgLive(kind,who){
+    const m=el("div","msg "+kind);
+    if(who)m.appendChild(el("div","who",esc(who)));
+    const b=el("div","bubble");m.appendChild(b);
+    stream().appendChild(m);stream().scrollTop=stream().scrollHeight;
+    return {set:t=>{b.textContent=t;stream().scrollTop=stream().scrollHeight;},done:t=>{b.textContent=t;S.transcript.push({role:kind,text:t});}};
+  }
+  // run a producer(onToken)->fullText into a streaming bubble; on failure fall back to scripted text
+  async function streamInto(kind,who,producer,fallbackText){
+    const tp=typing();let live=null,acc="";
+    const onToken=partial=>{acc=partial;if(!live){tp.remove();live=pushMsgLive(kind,who);}live.set(partial);};
+    try{
+      const full=await producer(onToken);
+      if(!live){tp.remove();live=pushMsgLive(kind,who);}
+      live.done(full||acc||fallbackText||"…");
+    }catch(e){
+      if(live)live.done(acc||fallbackText||"…");
+      else{tp.remove();pushMsg(kind,who,fallbackText);}
+    }
   }
 
   /* ===================== state ===================== */
@@ -1155,17 +1226,20 @@
     renderPersonas();
     const p=personaOf(beat);
     S.busy=true;enableInput(false);
-    const tp=typing();
-    let text=typeof beat.text==="function"?beat.text(S):beat.text;
-    if(liveOn()){try{text=await liveAdversaryLine(`Your current goal: ${beat.objective} Tactic in use: ${beat.tactic.name}.`);}catch(e){/* fallback to script */}}
-    const delay=liveOn()?150:620+Math.random()*400;
     const asVoice=(beat.voice!==undefined)?beat.voice:!!S.scen.voice;
-    setTimeout(()=>{
-      tp.remove();
-      if(asVoice)pushVoice("them",p.name,text);else pushMsg("them",p.name,text);
-      showTactic(beat);renderSuggests(beat);
-      S.busy=false;enableInput(true);$("#reply").focus();
-    },delay);
+    const scripted=typeof beat.text==="function"?beat.text(S):beat.text;
+    const extra=`Your current goal: ${beat.objective} Tactic in use: ${beat.tactic.name}.`;
+    const finish=()=>{showTactic(beat);renderSuggests(beat);S.busy=false;enableInput(true);$("#reply").focus();};
+    if(liveOn()&&!asVoice){ // text beat, live: stream tokens into the bubble
+      await streamInto("them",p.name,onToken=>liveAdversaryLine(extra,onToken),scripted);
+      finish();return;
+    }
+    if(liveOn()&&asVoice){ // voice beat, live: generate full text, then speak it
+      const tp=typing();let text=scripted;try{text=await liveAdversaryLine(extra);}catch(e){}
+      tp.remove();pushVoice("them",p.name,text);finish();return;
+    }
+    const tp=typing(); // scripted
+    setTimeout(()=>{tp.remove();if(asVoice)pushVoice("them",p.name,scripted);else pushMsg("them",p.name,scripted);finish();},620+Math.random()*400);
   }
   function renderSuggests(beat){
     const box=$("#suggests");
@@ -1247,15 +1321,13 @@
     S._timer=setInterval(()=>{if(S.finished){clearInterval(S._timer);return;}sec++;$("#callTimer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");},1000);
     pushMsg("system",null,SC("lede").replace(/<[^>]+>/g,""));
     S.busy=true;enableInput(false);
+    const showTac=()=>{$("#tacticBox").className="tactic";$("#tacticBox").innerHTML=`<div class="name">Urgent request <span class="badge b-crit">verify</span></div><div class="desc">Caller wants you to <b>${esc(imp.request)}</b>. Treat identity as unproven. Ask particle challenges, then decide.</div>`;S.busy=false;enableInput(true);$("#reply").focus();};
+    if(liveOn()){
+      await streamInto("them",imp.name,onToken=>callLLM([{role:"system",content:impostorSystem()},{role:"user",content:"(Open the call with your urgent request in character.)"}],{onToken}),imp.open);
+      showTac();return;
+    }
     const tp=typing();
-    let text=imp.open;
-    if(liveOn()){try{text=await liveImpostorOpen();}catch(e){}}
-    setTimeout(()=>{
-      tp.remove();pushMsg("them",imp.name,text);
-      $("#tacticBox").className="tactic";
-      $("#tacticBox").innerHTML=`<div class="name">Urgent request <span class="badge b-crit">verify</span></div><div class="desc">Caller wants you to <b>${esc(imp.request)}</b>. Treat identity as unproven. Ask particle challenges, then decide.</div>`;
-      S.busy=false;enableInput(true);$("#reply").focus();
-    },liveOn()?150:700);
+    setTimeout(()=>{tp.remove();pushMsg("them",imp.name,imp.open);showTac();},700);
   }
   function impostorSystem(){
     const imp=S.impostor;
@@ -1306,10 +1378,14 @@
     pc.q=text;S.particles.push(pc);S.qCount++;
     showParticleCoach(pc);renderParticleScorecard();setScores();
     S.busy=true;enableInput(false);
+    const scripted=scriptedImpostorReply(pc);
+    const done=()=>{S.busy=false;enableInput(true);$("#reply").focus();};
+    if(liveOn()){
+      await streamInto("them",S.impostor.name,onToken=>callLLM([{role:"system",content:impostorSystem()},...liveHistory()],{onToken}),scripted);
+      done();return;
+    }
     const tp=typing();
-    let reply=scriptedImpostorReply(pc);
-    if(liveOn()){try{reply=await callLLM([{role:"system",content:impostorSystem()},...liveHistory()]);}catch(e){}}
-    setTimeout(()=>{tp.remove();pushMsg("them",S.impostor.name,reply);S.busy=false;enableInput(true);$("#reply").focus();},liveOn()?150:640+Math.random()*350);
+    setTimeout(()=>{tp.remove();pushMsg("them",S.impostor.name,scripted);done();},640+Math.random()*350);
   }
 
   /* ===================== submit router ===================== */
@@ -1439,30 +1515,44 @@
   const PRESETS={
     custom:{endpoint:"",model:""},openai:{endpoint:"https://api.openai.com/v1",model:"gpt-4o-mini"},
     anthropic:{endpoint:"https://api.anthropic.com/v1",model:"claude-3-5-haiku-latest"},
+    openrouter:{endpoint:"https://openrouter.ai/api/v1",model:"openai/gpt-4o-mini"},
+    groq:{endpoint:"https://api.groq.com/openai/v1",model:"llama-3.1-8b-instant"},
+    together:{endpoint:"https://api.together.xyz/v1",model:"meta-llama/Llama-3.1-8B-Instruct-Turbo"},
     fabric:{endpoint:"https://ai.fabric-testbed.net/v1",model:""},
-    nrp:{endpoint:"https://ellm.nrp-nautilus.io/v1",model:""},ollama:{endpoint:"http://localhost:11434/v1",model:"llama3.1"}
+    nrp:{endpoint:"https://ellm.nrp-nautilus.io/v1",model:""},ollama:{endpoint:"http://localhost:11434/v1",model:"llama3.1"},
+    litellm:{endpoint:"http://localhost:4000/v1",model:""}
   };
+  // read the live-config form into a config object (used by save, test, and fetch-models)
+  function formCfg(){return {enabled:$("#liveToggle").classList.contains("on"),endpoint:$("#endpointInp").value.trim(),model:$("#modelInp").value.trim(),key:$("#keyInp").value.trim(),headers:$("#headersInp").value.trim(),stream:$("#streamToggle").classList.contains("on"),preset:$("#presetSel").value};}
   function openSettings(){
     const c=getLive();
     $("#liveToggle").classList.toggle("on",!!c.enabled);
     $("#endpointInp").value=c.endpoint||"";$("#modelInp").value=c.model||"";$("#keyInp").value=c.key||"";
+    $("#headersInp").value=c.headers||"";$("#streamToggle").classList.toggle("on",c.stream!==false);
     $("#presetSel").value=c.preset||"custom";$("#liveStatus").textContent="";
     $("#settingsOverlay").classList.remove("hidden");
   }
   $("#settingsBtn").onclick=openSettings;
   $("#liveToggle").onclick=()=>$("#liveToggle").classList.toggle("on");
+  $("#streamToggle").onclick=()=>$("#streamToggle").classList.toggle("on");
   $("#presetSel").onchange=e=>{const p=PRESETS[e.target.value];if(p){if(p.endpoint)$("#endpointInp").value=p.endpoint;if(p.model)$("#modelInp").value=p.model;}};
-  $("#saveLiveBtn").onclick=()=>{
-    setLive({enabled:$("#liveToggle").classList.contains("on"),endpoint:$("#endpointInp").value.trim(),model:$("#modelInp").value.trim(),key:$("#keyInp").value.trim(),preset:$("#presetSel").value});
-    refreshLiveBadge();$("#settingsOverlay").classList.add("hidden");
-  };
-  $("#testLiveBtn").onclick=async()=>{
+  $("#saveLiveBtn").onclick=()=>{setLive(formCfg());refreshLiveBadge();$("#settingsOverlay").classList.add("hidden");};
+  function withTempCfg(fn){const prev=getLive();setLive({...formCfg(),enabled:true});return Promise.resolve().then(fn).finally(()=>setLive(prev));}
+  $("#testLiveBtn").onclick=()=>{
     const s=$("#liveStatus");s.style.color="var(--muted)";s.textContent="Testing…";
-    const prev=getLive();
-    setLive({enabled:true,endpoint:$("#endpointInp").value.trim(),model:$("#modelInp").value.trim(),key:$("#keyInp").value.trim(),preset:$("#presetSel").value});
-    try{const r=await callLLM([{role:"system",content:"Reply with the single word: ready"},{role:"user",content:"ready?"}],10);s.style.color="var(--good)";s.textContent="✓ Connected. Model replied: "+r.slice(0,40);}
-    catch(e){s.style.color="var(--red)";s.textContent="✗ Failed: "+e.message+". If this is the published artifact, external calls are blocked — open the file locally.";}
-    setLive(prev);
+    withTempCfg(async()=>{
+      const r=await callLLM([{role:"system",content:"Reply with the single word: ready"},{role:"user",content:"ready?"}],{maxTokens:10});
+      s.style.color="var(--good)";s.textContent="✓ Connected. Model replied: "+r.slice(0,40);
+    }).catch(e=>{s.style.color="var(--red)";s.textContent="✗ Failed: "+e.message+". A published artifact can't reach external endpoints — open the file locally.";});
+  };
+  $("#fetchModelsBtn").onclick=()=>{
+    const s=$("#liveStatus");s.style.color="var(--muted)";s.textContent="Fetching model list…";
+    withTempCfg(async()=>{
+      const list=await fetchModels();
+      $("#modelList").innerHTML=list.map(m=>`<option value="${esc(m)}"></option>`).join("");
+      if(!$("#modelInp").value&&list.length)$("#modelInp").value=list[0];
+      s.style.color="var(--good)";s.textContent=`✓ ${list.length} model(s) — pick from the Model field.`;
+    }).catch(e=>{s.style.color="var(--red)";s.textContent="✗ Couldn't list models: "+e.message+". You can still type the model name manually.";});
   };
   // close overlays on backdrop click (settings only)
   $("#settingsOverlay").addEventListener("click",e=>{if(e.target.id==="settingsOverlay")$("#settingsOverlay").classList.add("hidden");});
