@@ -63,23 +63,26 @@
 
   <h2>Open a trainer</h2>
   <div class="cards">
-    <a class="card primary" href="counterpart-trainer-v2.html">
+    <a class="card primary" href="counterpart-trainer-v3.html">
       <div class="ico">🎭</div>
-      <div class="t">Counterpart v2 <span class="tag">Recommended</span></div>
-      <div class="d">Everything in v1, plus deepfake defense with particle scoring, voice-note
-      extortion, information-theoretic leakage, decoy &amp; silence countermeasures, and a random
-      cover identity each run.</div>
-      <div class="go">Launch v2 →</div>
+      <div class="t">Counterpart v3 <span class="tag">Recommended</span></div>
+      <div class="d">Deepfake defense with particle scoring, voice-note extortion,
+      information-theoretic leakage, decoy &amp; silence countermeasures, a random cover
+      identity each run — plus an optional client-side LLM gateway (streaming, custom
+      headers, model discovery).</div>
+      <div class="go">Launch v3 →</div>
     </a>
-    <a class="card" href="counterpart-trainer.html">
+    <a class="card" href="counterpart-trainer-v2.html">
       <div class="ico">🛡️</div>
-      <div class="t">Counterpart v1</div>
-      <div class="d">The original three PII-fragmentation scenarios, kept for reference.</div>
-      <div class="go">Launch v1 →</div>
+      <div class="t">Counterpart v2 &amp; v1</div>
+      <div class="d">Earlier versions, kept for reference:
+      <a href="counterpart-trainer-v2.html">v2</a> (scenarios without the LLM-gateway work)
+      and <a href="counterpart-trainer.html">v1</a> (original PII-fragmentation scenarios).</div>
+      <div class="go">Launch v2 →</div>
     </a>
   </div>
 
-  <h2>Scenarios in v2</h2>
+  <h2>Scenarios</h2>
   <ul class="scen">
     <li><b>🎯 The Friendly Quiz</b> — <span>a quiz bot harvests security-question answers one fragment at a time.</span></li>
     <li><b>🪤 The Sieve</b> — <span>yes/no games where saying <i>no</i> leaks the complement just as surely as yes.</span></li>
@@ -89,7 +92,8 @@
     <li><b>🎭 The Impersonator</b> — <span>a deepfake of someone you know makes an urgent request. You are the verifier.</span></li>
   </ul>
   <p class="note" style="margin-top:12px">Every scenario ships multiple scripts and picks one at
-  random, so no two runs are the same.</p>
+  random, so no two runs are the same. The adversary can optionally be voiced by your own
+  <a href="docs/LLM-GATEWAY.md">OpenAI-compatible LLM gateway</a> — scoring always stays local.</p>
 
   <div class="safety">
     <b>Safety note.</b> These are training simulations. The scripted adversaries never request or

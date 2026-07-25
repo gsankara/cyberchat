@@ -68,3 +68,9 @@ anthropic, openrouter, groq, together, fabric, nrp, ollama, litellm. Scoring sta
 deterministic/local — the model only supplies adversary wording. Verified end-to-end against a
 local mock OpenAI server (streaming, auth, custom-header echo, /models). A published artifact
 still can't reach external endpoints (CORS), so it falls back to scripted.
+
+**v3 snapshot:** `counterpart-trainer-v3.html` is the current release — same feature set as v2
+plus the hardened client-side LLM gateway as its headline, relabelled v3 in title/header. Repo
+`gsankara/cyberchat` now ships v1/v2/v3 + `index.html` landing page + `docs/LLM-GATEWAY.md`
+(live-mode setup, provider examples, CORS/hosting notes) + an in-app "Setup & provider
+examples" panel in the settings modal. GitHub Pages is enabled by the user.

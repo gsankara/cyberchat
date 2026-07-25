@@ -1,0 +1,1615 @@
+<title>Counterpart v3 — Adversarial Chat &amp; Deepfake Defense Range</title>
+<style>
+  :root{
+    --ink:#0D141C; --panel:#141F2B; --panel-2:#0F1925; --raise:#1B2A3A;
+    --line:#243546; --line-soft:#1C2A38;
+    --text:#E6EDF3; --muted:#93A4B3; --faint:#63788A;
+    --teal:#2DD4BF; --teal-deep:#14B8A6; --teal-ink:#062B27;
+    --amber:#F6A82C; --red:#E5484D; --red-deep:#B4262B;
+    --good:#3DD68C; --violet:#9B8CFF;
+    --shadow:0 10px 40px rgba(0,0,0,.45);
+    --mono:"Cascadia Code","Cascadia Mono",Consolas,"SF Mono",ui-monospace,"Roboto Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --ink:#EDF1F0; --panel:#FFFFFF; --panel-2:#F3F6F6; --raise:#FFFFFF;
+      --line:#D3DCDD; --line-soft:#E3E9E9; --text:#0E1B22; --muted:#4B5E67; --faint:#7C8E96;
+      --teal:#0E9E8E; --teal-deep:#0B8578; --teal-ink:#DDF6F2;
+      --amber:#C6790B; --red:#CE3138; --red-deep:#A21F25; --good:#129A5E; --violet:#6B5BD6;
+      --shadow:0 10px 30px rgba(20,40,50,.12);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#0D141C; --panel:#141F2B; --panel-2:#0F1925; --raise:#1B2A3A;
+    --line:#243546; --line-soft:#1C2A38; --text:#E6EDF3; --muted:#93A4B3; --faint:#63788A;
+    --teal:#2DD4BF; --teal-deep:#14B8A6; --teal-ink:#062B27;
+    --amber:#F6A82C; --red:#E5484D; --red-deep:#B4262B; --good:#3DD68C; --violet:#9B8CFF;
+    --shadow:0 10px 40px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"]{
+    --ink:#EDF1F0; --panel:#FFFFFF; --panel-2:#F3F6F6; --raise:#FFFFFF;
+    --line:#D3DCDD; --line-soft:#E3E9E9; --text:#0E1B22; --muted:#4B5E67; --faint:#7C8E96;
+    --teal:#0E9E8E; --teal-deep:#0B8578; --teal-ink:#DDF6F2;
+    --amber:#C6790B; --red:#CE3138; --red-deep:#A21F25; --good:#129A5E; --violet:#6B5BD6;
+    --shadow:0 10px 30px rgba(20,40,50,.12);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .mono{font-family:var(--mono)}
+  button{font-family:inherit}
+  ::selection{background:rgba(45,212,191,.28)}
+
+  .app{display:grid;grid-template-rows:auto 1fr;height:100dvh;max-width:1320px;margin:0 auto;border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft)}
+  header.bar{display:flex;align-items:center;gap:16px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .glyph{width:30px;height:30px;border-radius:8px;flex:0 0 auto;background:radial-gradient(circle at 32% 30%,var(--teal) 0 22%,transparent 23%),linear-gradient(135deg,var(--raise),var(--panel));border:1px solid var(--line);position:relative}
+  .glyph::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 2px var(--panel-2),0 0 0 3px var(--red);top:7px;right:7px}
+  .brand h1{font-size:15px;margin:0;letter-spacing:.02em;font-weight:700;white-space:nowrap}
+  .brand h1 span{color:var(--teal)}
+  .brand h1 em{font-style:normal;color:var(--faint);font-weight:500;font-size:12px}
+  .brand .sub{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar .spacer{flex:1}
+  .scoreboard{display:flex;align-items:center;gap:18px}
+  .metric{display:flex;flex-direction:column;gap:3px;min-width:88px}
+  .metric .k{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .metric .v{font-family:var(--mono);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+  .meter{height:6px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:5px;width:120px}
+  .meter>i{display:block;height:100%;width:0%;border-radius:6px;background:linear-gradient(90deg,var(--good),var(--amber) 55%,var(--red));transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  .iconbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);height:34px;min-width:34px;padding:0 9px;border-radius:8px;cursor:pointer;font-size:14px;display:inline-grid;place-items:center}
+  .iconbtn:hover{color:var(--text);border-color:var(--teal-deep)}
+  .livebadge{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:20px;border:1px solid var(--line);color:var(--faint);display:flex;align-items:center;gap:6px}
+  .livebadge b{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+  .livebadge.on{color:var(--violet);border-color:var(--violet)}
+  .livebadge.on b{background:var(--violet);box-shadow:0 0 8px var(--violet)}
+
+  .work{display:grid;grid-template-columns:1fr 356px;min-height:0}
+  @media (max-width:900px){.work{grid-template-columns:1fr}}
+  .chatwrap{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--line)}
+  .personas{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--line-soft);background:var(--panel-2);flex-wrap:wrap}
+  .personas.hidden{display:none}
+  .persona{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid transparent;border-bottom:none;border-radius:9px 9px 0 0;color:var(--muted);font-size:13px}
+  .persona .av{width:20px;height:20px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-size:11px;background:var(--raise);border:1px solid var(--line);color:var(--text)}
+  .persona.active{background:var(--panel);border-color:var(--line);color:var(--text);position:relative;top:1px}
+
+  .callbar{display:none;align-items:center;gap:12px;padding:10px 16px;background:linear-gradient(90deg,color-mix(in srgb,var(--red) 14%,var(--panel-2)),var(--panel-2));border-bottom:1px solid var(--line)}
+  .callbar.show{display:flex}
+  .callbar .cav{width:36px;height:36px;border-radius:50%;background:var(--raise);border:1px solid var(--line);display:grid;place-items:center;font-size:16px;position:relative}
+  .callbar .cav::after{content:"";position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;background:var(--red);border:2px solid var(--panel-2);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .callbar .cinfo{min-width:0}
+  .callbar .cinfo .n{font-weight:600;font-size:14px}
+  .callbar .cinfo .s{font-family:var(--mono);font-size:11px;color:var(--red);letter-spacing:.04em;text-transform:uppercase}
+  .callbar .ctimer{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .stream{flex:1;overflow-y:auto;padding:20px 20px 8px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+  .daybreak{align-self:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);background:var(--panel-2);border:1px solid var(--line-soft);padding:4px 12px;border-radius:20px;text-align:center;max-width:90%}
+  .msg{max-width:80%;display:flex;flex-direction:column;gap:4px;animation:rise .35s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .msg .who{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--faint);padding:0 4px}
+  .bubble{padding:11px 14px;border-radius:14px;font-size:14.5px;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+  .msg.them{align-self:flex-start}
+  .msg.them .bubble{background:var(--panel);border:1px solid var(--line);border-top-left-radius:5px;color:var(--text)}
+  .msg.you{align-self:flex-end;align-items:flex-end}
+  .msg.you .bubble{background:linear-gradient(160deg,var(--teal-deep),var(--teal));color:#04231f;border-top-right-radius:5px;font-weight:500}
+  .msg.system{align-self:center;max-width:94%}
+  .msg.system .bubble{background:transparent;border:1px dashed var(--line);color:var(--muted);font-size:13px;border-radius:12px}
+  .typing .bubble{display:inline-flex;gap:4px;align-items:center;padding:14px}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--faint);animation:blink 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+  .composer{border-top:1px solid var(--line);padding:12px 14px;background:var(--panel-2);display:flex;flex-direction:column;gap:10px}
+  .decis{display:none;gap:10px;flex-wrap:wrap}
+  .decis.show{display:flex}
+  .decis button{flex:1;min-width:160px;border-radius:11px;padding:11px;font-weight:600;font-size:13.5px;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--text)}
+  .decis .reject{border-color:var(--teal-deep);color:var(--teal)}
+  .decis .reject:hover{background:color-mix(in srgb,var(--teal) 12%,var(--panel))}
+  .decis .comply{border-color:var(--red-deep);color:var(--red)}
+  .decis .comply:hover{background:color-mix(in srgb,var(--red) 12%,var(--panel))}
+  .suggests{display:flex;gap:8px;flex-wrap:wrap}
+  .suggests.hidden{display:none}
+  .chip{font-size:12.5px;padding:7px 11px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;text-align:left}
+  .chip:hover{border-color:var(--teal-deep);color:var(--text)}
+  .chip .lead{font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:.05em;display:block}
+  /* voice notes */
+  .voicebub{min-width:230px}
+  .vrow{display:flex;align-items:center;gap:10px}
+  .vplay{width:30px;height:30px;flex:0 0 auto;border-radius:50%;border:1px solid var(--line);background:var(--panel-2);color:var(--text);cursor:pointer;font-size:12px;display:grid;place-items:center}
+  .msg.you .vplay{background:rgba(255,255,255,.35);border-color:transparent;color:#04231f}
+  .vplay:hover{border-color:var(--teal-deep)}
+  .wave{flex:1;display:flex;align-items:center;gap:2px;height:26px;min-width:90px}
+  .wave i{flex:1;background:var(--faint);border-radius:2px;opacity:.55;transition:opacity .2s}
+  .msg.you .wave i{background:#04231f;opacity:.45}
+  .wave.playing i{animation:vbounce .9s ease-in-out infinite;opacity:1}
+  .wave.playing i:nth-child(3n){animation-delay:.15s}
+  .wave.playing i:nth-child(3n+1){animation-delay:.3s}
+  @keyframes vbounce{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
+  .vdur{font-family:var(--mono);font-size:11px;color:var(--faint);flex:0 0 auto;font-variant-numeric:tabular-nums}
+  .msg.you .vdur{color:#04231f;opacity:.8}
+  .vtrans{margin-top:8px;background:none;border:none;padding:0;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);cursor:pointer;text-decoration:underline}
+  .vtrans:hover{color:var(--text)}
+  .msg.you .vtrans{color:#04231f;opacity:.75}
+  .vtext{margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);font-size:13.5px;color:var(--muted)}
+  .msg.you .vtext{color:#04231f;border-top-color:rgba(4,35,31,.25)}
+  .vtext.hidden{display:none}
+  .moverow{display:flex;gap:8px;flex-wrap:wrap}
+  .moverow.hidden{display:none}
+  .movebtn{font-size:12px;padding:6px 11px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;font-family:var(--mono);letter-spacing:.02em}
+  .movebtn:hover{color:var(--text);border-color:var(--faint)}
+  .movebtn:disabled{opacity:.4;cursor:default}
+  .movebtn.on{color:var(--violet);border-color:var(--violet);background:color-mix(in srgb,var(--violet) 10%,var(--panel))}
+  .inputrow{display:flex;gap:10px;align-items:flex-end}
+  textarea#reply{flex:1;resize:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text);font-family:inherit;font-size:14.5px;padding:11px 13px;line-height:1.45;max-height:140px;min-height:46px}
+  textarea#reply:focus{outline:none;border-color:var(--teal-deep);box-shadow:0 0 0 3px rgba(45,212,191,.15)}
+  textarea#reply:disabled{opacity:.5}
+  .send{background:var(--teal);color:#04231f;border:none;border-radius:12px;padding:0 18px;height:46px;font-weight:700;cursor:pointer;font-size:14px;flex:0 0 auto}
+  .send:hover{background:var(--teal-deep)}.send:disabled{opacity:.4;cursor:default}
+  .hintbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:12px;height:46px;padding:0 14px;cursor:pointer;font-size:13px;flex:0 0 auto}
+  .hintbtn:hover{color:var(--text);border-color:var(--amber)}
+  .hintbtn.hidden{display:none}
+
+  .rail{background:var(--panel-2);overflow-y:auto;display:flex;flex-direction:column}
+  @media (max-width:900px){.rail{border-top:1px solid var(--line)}}
+  .card{border-bottom:1px solid var(--line-soft);padding:15px 16px}
+  .card.hidden{display:none}
+  .card h3{margin:0 0 10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:8px}
+  .card h3 .pip{width:6px;height:6px;border-radius:50%;background:var(--teal)}
+  .tactic{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px;min-height:52px}
+  .tactic.empty{color:var(--faint);font-size:13px}
+  .tactic .name{font-weight:600;font-size:14px;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+  .tactic .badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:20px;border:1px solid}
+  .b-crit{color:var(--red);border-color:var(--red)}.b-high{color:var(--amber);border-color:var(--amber)}
+  .b-med{color:var(--teal);border-color:var(--teal-deep)}.b-info{color:var(--faint);border-color:var(--line)}
+  .tactic .desc{font-size:12.5px;color:var(--muted)}
+
+  .coach{border-radius:11px;padding:12px;font-size:13px;border:1px solid var(--line);background:var(--panel)}
+  .coach.good{border-color:color-mix(in srgb,var(--good) 55%,var(--line));background:color-mix(in srgb,var(--good) 8%,var(--panel))}
+  .coach.bad{border-color:color-mix(in srgb,var(--red) 55%,var(--line));background:color-mix(in srgb,var(--red) 8%,var(--panel))}
+  .coach.warn{border-color:color-mix(in srgb,var(--amber) 55%,var(--line));background:color-mix(in srgb,var(--amber) 9%,var(--panel))}
+  .coach .verdict{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;display:flex;gap:8px;align-items:center}
+  .coach.good .verdict{color:var(--good)}.coach.bad .verdict{color:var(--red)}.coach.warn .verdict{color:var(--amber)}
+  .coach .verdict b{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  .frag{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line-soft)}
+  .frag:last-child{border-bottom:none}
+  .frag .sev{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+  .frag .lbl{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.03em;flex:0 0 auto;min-width:110px;text-transform:uppercase}
+  .frag .val{font-size:13px;color:var(--text);word-break:break-word}
+  .frag-empty,.synth-empty{color:var(--faint);font-size:12.5px}
+  .synth{background:var(--panel);border:1px solid var(--red-deep);border-radius:11px;padding:12px}
+  .synth h4{margin:0 0 8px;font-size:13px;color:var(--red);display:flex;align-items:center;gap:8px}
+  .synth ul{margin:0;padding-left:16px;font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+  .synth code{font-family:var(--mono);background:var(--panel-2);padding:1px 5px;border-radius:5px;color:var(--text);border:1px solid var(--line)}
+
+  /* particle scorecard */
+  .pbar{display:flex;align-items:center;gap:10px;margin:9px 0}
+  .pbar .pl{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);width:96px;flex:0 0 auto}
+  .pbar .track{flex:1;height:7px;border-radius:6px;background:var(--line);overflow:hidden}
+  .pbar .track>i{display:block;height:100%;width:0%;border-radius:6px;background:linear-gradient(90deg,var(--teal-deep),var(--teal));transition:width .45s ease}
+  .pbar.expo .track>i{background:linear-gradient(90deg,var(--good),var(--amber),var(--red))}
+  .pbar .pv{font-family:var(--mono);font-size:11px;color:var(--faint);width:30px;text-align:right;font-variant-numeric:tabular-nums}
+  .pcap{font-size:11.5px;color:var(--faint);margin-top:4px;line-height:1.45}
+  .tellrow{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--muted)}
+  .tellrow .tn{font-family:var(--mono);color:var(--good);font-size:16px;font-variant-numeric:tabular-nums}
+
+  .idgrid{display:flex;flex-wrap:wrap;gap:7px}
+  .idchip{display:flex;flex-direction:column;gap:1px;padding:6px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel);min-width:0}
+  .idchip .k{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .idchip .v{font-size:12.5px;color:var(--text);font-weight:500}
+  .idchip.exposed{border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--panel))}
+  .idchip.exposed .v{color:var(--red);text-decoration:line-through}
+  .idchip.exposed .k::after{content:" · exposed";color:var(--red)}
+  .space-meter{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px}
+  .space-meter .big{font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums;color:var(--amber)}
+  .space-meter .lab{font-size:11.5px;color:var(--faint);margin-top:2px}
+  .bitpips{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
+  .bitpips i{width:14px;height:14px;border-radius:3px;background:var(--line)}
+  .bitpips i.on{background:var(--red)}
+
+  /* overlays */
+  .overlay{position:fixed;inset:0;background:rgba(6,11,16,.72);backdrop-filter:blur(3px);display:grid;place-items:center;padding:22px;z-index:40}
+  .overlay.hidden{display:none}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);max-width:780px;width:100%;max-height:92dvh;overflow-y:auto}
+  .modal-head{padding:22px 26px 6px}
+  .modal-head .kick{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+  .modal-head h2{margin:6px 0 6px;font-size:23px;letter-spacing:-.01em;text-wrap:balance}
+  .modal-head p{margin:0;color:var(--muted);font-size:14px;max-width:62ch}
+  .modal-body{padding:14px 26px 24px}
+  .seclabel{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:18px 0 10px}
+  .scen-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:560px){.scen-grid{grid-template-columns:1fr}}
+  .scen{text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:15px;cursor:pointer;display:flex;flex-direction:column;gap:7px;transition:border-color .15s,transform .15s}
+  .scen:hover{border-color:var(--teal-deep);transform:translateY(-2px)}
+  .scen.sel{border-color:var(--teal);box-shadow:0 0 0 2px rgba(45,212,191,.25)}
+  .scen.flag{border-color:color-mix(in srgb,var(--violet) 40%,var(--line))}
+  .scen.flag.sel{border-color:var(--violet);box-shadow:0 0 0 2px color-mix(in srgb,var(--violet) 35%,transparent)}
+  .scen .ico{font-size:20px}
+  .scen .t{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+  .scen .t .nu{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--violet);border:1px solid var(--violet);border-radius:20px;padding:1px 6px}
+  .scen .d{font-size:12.5px;color:var(--muted)}
+  .scen .meta{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+  .levels{display:flex;gap:10px;flex-wrap:wrap}
+  .lvl{flex:1;min-width:150px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;text-align:left}
+  .lvl.sel{border-color:var(--teal);box-shadow:0 0 0 2px rgba(45,212,191,.25)}
+  .lvl .t{font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+  .lvl .t .lv{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .lvl .d{font-size:12px;color:var(--muted);margin-top:3px}
+  .startbtn{margin-top:22px;width:100%;background:var(--teal);color:#04231f;border:none;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer}
+  .startbtn:hover{background:var(--teal-deep)}.startbtn:disabled{opacity:.4;cursor:default}
+  .disclaimer{margin-top:14px;font-size:11.5px;color:var(--faint);border-top:1px solid var(--line-soft);padding-top:12px;line-height:1.5}
+
+  /* settings */
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+  .field label{font-size:12.5px;color:var(--muted);font-weight:500}
+  .field input,.field select{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;color:var(--text);font-family:var(--mono);font-size:13px;padding:9px 11px}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--teal-deep)}
+  .field .help{font-size:11px;color:var(--faint)}
+  .toggle{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;margin-bottom:6px}
+  .toggle .sw{width:40px;height:23px;border-radius:20px;background:var(--line);position:relative;transition:background .2s;flex:0 0 auto}
+  .toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;transition:transform .2s}
+  .toggle.on .sw{background:var(--violet)}.toggle.on .sw::after{transform:translateX(17px)}
+  .toggle .tl{font-weight:600;font-size:14px}
+  .warnbox{font-size:12px;color:var(--muted);background:color-mix(in srgb,var(--amber) 9%,var(--panel-2));border:1px solid color-mix(in srgb,var(--amber) 35%,var(--line));border-radius:10px;padding:11px 13px;line-height:1.5;margin-bottom:14px}
+  .warnbox b{color:var(--text)}
+  .llmhelp{margin-bottom:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);overflow:hidden}
+  .llmhelp>summary{cursor:pointer;padding:10px 13px;font-size:13px;font-weight:600;color:var(--text);user-select:none}
+  .llmhelp>summary:hover{color:var(--teal)}
+  .llmhelp[open]>summary{border-bottom:1px solid var(--line-soft)}
+  .llmhelp-body{padding:12px 14px;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .llmhelp-body ol{margin:0 0 10px;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+  .llmhelp-body b{color:var(--text)}
+  .llmex{width:100%;border-collapse:collapse;margin:4px 0 10px;display:block;overflow-x:auto}
+  .llmex th,.llmex td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line-soft);font-size:11.5px;vertical-align:top;white-space:nowrap}
+  .llmex th{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .llmex td.mono,.llmex td .mono{white-space:nowrap}
+  .btnrow{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+  .btnrow button{flex:1;min-width:140px;border-radius:11px;padding:12px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid var(--line)}
+  .btnrow .primary{background:var(--teal);color:#04231f;border-color:var(--teal)}
+  .btnrow .ghost{background:transparent;color:var(--text)}.btnrow .ghost:hover{border-color:var(--teal-deep)}
+
+  /* debrief */
+  .grade-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .grade{width:78px;height:78px;border-radius:16px;display:grid;place-items:center;font-family:var(--mono);font-size:38px;font-weight:700;flex:0 0 auto;border:2px solid}
+  .grade-stats{display:flex;gap:22px;flex-wrap:wrap}
+  .grade-stats .s .k{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .grade-stats .s .v{font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums}
+  .review{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .rev{border:1px solid var(--line);border-radius:11px;padding:12px;background:var(--panel-2)}
+  .rev .rq{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .rev .ra{font-size:13.5px;padding:8px 10px;border-radius:8px;margin-bottom:8px;background:var(--panel);border:1px solid var(--line)}
+  .rev .rv{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+  .rev.leak{border-color:color-mix(in srgb,var(--red) 45%,var(--line))}.rev.leak .rv{color:var(--red)}
+  .rev.hold{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}.rev.hold .rv{color:var(--good)}
+  .rev.soft .rv{color:var(--amber)}
+  .rev .model{font-size:12.5px;color:var(--muted)}.rev .model b{color:var(--teal)}
+  .resources{margin-top:16px;font-size:12.5px;color:var(--muted);background:color-mix(in srgb,var(--teal) 7%,var(--panel-2));border:1px solid var(--line);border-radius:12px;padding:13px 15px;line-height:1.55}
+  .resources b{color:var(--text)}.resources a{color:var(--teal)}
+  .hidden{display:none!important}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <div class="glyph" aria-hidden="true"></div>
+      <div style="min-width:0">
+        <h1>COUNTER<span>PART</span> <em>v3</em></h1>
+        <div class="sub" id="scenLabel">Adversarial chat &amp; deepfake defense range</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="scoreboard">
+      <div class="metric"><span class="k" id="scoreKey">Privacy score</span><span class="v" id="privVal">100</span></div>
+      <div class="metric"><span class="k" id="meterKey">Exposure</span><div class="meter"><i id="expBar"></i></div></div>
+    </div>
+    <div class="livebadge" id="liveBadge" title="Live adversary mode"><b></b><span id="liveTxt">Scripted</span></div>
+    <button class="iconbtn" id="settingsBtn" title="Live mode &amp; settings" aria-label="Settings">⚙</button>
+    <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    <button class="iconbtn" id="restartBtn" title="New scenario" aria-label="New scenario">⟲</button>
+  </header>
+
+  <div class="work">
+    <section class="chatwrap">
+      <div class="personas hidden" id="personas"></div>
+      <div class="callbar" id="callbar">
+        <div class="cav" id="callAv">📞</div>
+        <div class="cinfo"><div class="n" id="callName">Incoming call</div><div class="s" id="callState">Live · unverified</div></div>
+        <div class="ctimer" id="callTimer"></div>
+      </div>
+      <div class="stream" id="stream" aria-live="polite"></div>
+      <div class="composer">
+        <div class="suggests hidden" id="suggests"></div>
+        <div class="decis" id="decis">
+          <button class="reject" id="rejectBtn">Reject &amp; verify out-of-band</button>
+          <button class="comply" id="complyBtn">Do what they asked</button>
+        </div>
+        <div class="moverow" id="moveRow">
+          <button class="movebtn" id="silentBtn" title="Send no answer — a non-response tests how hard they push and reveals motive">⏸ Stay silent</button>
+          <button class="movebtn" id="decoyBtn" title="Score your next reply as deliberate noise / fake information">🃏 Decoy: off</button>
+          <button class="movebtn hidden" id="voiceBtn" title="Reply with a voice note (simulated — no microphone is used)">🎙 Send voice note</button>
+        </div>
+        <div class="inputrow">
+          <textarea id="reply" rows="1" placeholder="Type your reply…" disabled></textarea>
+          <button class="hintbtn hidden" id="hintBtn">Hint</button>
+          <button class="send" id="sendBtn" disabled>Send</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="rail">
+      <div class="card" id="tacticCard">
+        <h3><span class="pip"></span><span id="tacticH">Detected tactic</span></h3>
+        <div class="tactic empty" id="tacticBox">Awaiting the adversary's next move…</div>
+      </div>
+      <div class="card">
+        <h3><span class="pip" style="background:var(--amber)"></span>Coach</h3>
+        <div id="coachBox" class="tactic empty">Feedback on each reply appears here.</div>
+      </div>
+
+      <!-- cover identity (profile scenarios) -->
+      <div class="card hidden" id="identityCard">
+        <h3><span class="pip" style="background:var(--good)"></span>Your cover identity</h3>
+        <div id="identityBox"></div>
+        <div class="pcap">These are the only secrets the adversary is after. Reveal <b>none</b> of them — any other value is a decoy (noise), and refusing is simplest.</div>
+      </div>
+
+      <!-- extract-mode cards -->
+      <div class="card" id="fragCard">
+        <h3><span class="pip" style="background:var(--red)"></span><span id="fragH">Fragments harvested</span></h3>
+        <div id="fragBox"><div class="frag-empty">Nothing leaked yet. Keep it that way.</div></div>
+      </div>
+      <div class="card" id="synthCard">
+        <h3><span class="pip" style="background:var(--red)"></span><span id="synthH">Attack synthesis</span></h3>
+        <div id="synthBox"><div class="synth-empty">As the adversary collects fragments, watch how they combine into an attack here.</div></div>
+      </div>
+
+      <!-- verify-mode particle scorecard -->
+      <div class="card hidden" id="particleCard">
+        <h3><span class="pip" style="background:var(--violet)"></span>Particle scorecard</h3>
+        <div class="pbar"><span class="pl">Volatility</span><div class="track"><i id="pb-vol"></i></div><span class="pv" id="pv-vol">0</span></div>
+        <div class="pbar"><span class="pl">Entropy</span><div class="track"><i id="pb-ent"></i></div><span class="pv" id="pv-ent">0</span></div>
+        <div class="pbar"><span class="pl">Liveness</span><div class="track"><i id="pb-liv"></i></div><span class="pv" id="pv-liv">0</span></div>
+        <div class="pbar"><span class="pl">Shared&nbsp;secret</span><div class="track"><i id="pb-sha"></i></div><span class="pv" id="pv-sha">0</span></div>
+        <div class="pbar expo"><span class="pl">Exposure</span><div class="track"><i id="pb-exp"></i></div><span class="pv" id="pv-exp">0</span></div>
+        <div class="pcap" id="pCap">Interrogate the caller with <b>particle</b> challenges. Good particles are volatile, high-entropy, private, or need a live action — things a deepfake can't fake. Exposure (public/OSINT facts) is what it <i>can</i>.</div>
+        <div class="tellrow">Deepfake tells provoked: <span class="tn" id="tellN">0</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- START -->
+<div class="overlay" id="startOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="kick">Training range · nothing you type leaves this browser (unless you turn on live mode)</div>
+      <h2>Practice the conversation, not the breach.</h2>
+      <p>Counterpart puts you across from a simulated adversary. Some scenarios train you to <b>give away nothing</b>; others train you to <b>unmask a deepfake</b> by asking the right questions. Pick a scenario and a difficulty.</p>
+    </div>
+    <div class="modal-body">
+      <div class="seclabel">1 · Choose a scenario</div>
+      <div class="scen-grid" id="scenGrid"></div>
+      <div class="seclabel">2 · Choose a difficulty</div>
+      <div class="levels" id="lvlRow"></div>
+      <button class="startbtn" id="beginBtn" disabled>Enter the range</button>
+      <p class="disclaimer">This is a safety-training simulation. Scripted adversaries never ask for or display explicit content. With <b>live mode</b> off, nothing you type is transmitted anywhere. If a real situation resembles these scenarios — especially one involving a minor — stop and reach a trusted adult and the resources shown at the end of each run.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="overlay hidden" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="kick">Live adversary mode</div>
+      <h2>Bring your own model</h2>
+      <p>By default the adversary is a deterministic script — reliable, offline, and private. Turn on live mode to have a real LLM voice the adversary. Your <b>scores are always computed locally</b>; the model only supplies the adversary's words.</p>
+    </div>
+    <div class="modal-body">
+      <div class="toggle" id="liveToggle"><div class="sw"></div><div class="tl">Enable live adversary</div></div>
+      <div class="warnbox">
+        <b>Read before enabling.</b> The browser talks <b>directly</b> to your gateway — the request goes client-side to <span class="mono">&lt;endpoint&gt;/chat/completions</span>, no server of ours in between. Your typed messages leave the browser to reach that endpoint, so use a test persona, never real personal data. <b>Scoring always stays local and deterministic</b> — the model only voices the adversary's words. A <b>page served over the web cannot reach external endpoints</b> (browser CORS blocks cross-origin calls), so live mode works when you open this file locally or point it at a CORS-enabled gateway. If a call fails, the scenario silently falls back to the script.
+      </div>
+      <details class="llmhelp">
+        <summary>Setup &amp; provider examples</summary>
+        <div class="llmhelp-body">
+          <ol>
+            <li>Pick a <b>preset</b> (or Custom) — it fills the endpoint; type or <b>Fetch models</b> for the model.</li>
+            <li>Paste your <b>API key</b> (sent as <span class="mono">Authorization: Bearer …</span>) and any <b>custom headers</b> the gateway needs.</li>
+            <li><b>Test connection</b>, then <b>Save</b>. The badge turns violet when live mode is on.</li>
+          </ol>
+          <table class="llmex">
+            <tr><th>Provider</th><th>Endpoint</th><th>Model / notes</th></tr>
+            <tr><td>OpenAI</td><td class="mono">https://api.openai.com/v1</td><td class="mono">gpt-4o-mini</td></tr>
+            <tr><td>OpenRouter</td><td class="mono">https://openrouter.ai/api/v1</td><td class="mono">openai/gpt-4o-mini</td></tr>
+            <tr><td>Groq</td><td class="mono">https://api.groq.com/openai/v1</td><td class="mono">llama-3.1-8b-instant</td></tr>
+            <tr><td>Ollama (local)</td><td class="mono">http://localhost:11434/v1</td><td class="mono">llama3.1 · no key</td></tr>
+            <tr><td>LiteLLM proxy</td><td class="mono">http://localhost:4000/v1</td><td>routes to any model; add CORS for hosted use</td></tr>
+            <tr><td>Azure OpenAI</td><td class="mono">…/openai/deployments/&lt;dep&gt;</td><td>key in custom headers: <span class="mono">{"api-key":"…"}</span></td></tr>
+          </table>
+          <p><b>Streaming</b> renders replies token-by-token; turn it off if your gateway doesn't support SSE. <b>Hosting note:</b> from GitHub Pages (or any web host) the browser can only reach a gateway that returns permissive CORS headers — a local proxy such as LiteLLM or Ollama with CORS enabled works; most cloud APIs don't. Running the file locally avoids CORS entirely. Full guide: <span class="mono">docs/LLM-GATEWAY.md</span> in the repo.</p>
+        </div>
+      </details>
+      <div class="field">
+        <label>Gateway preset</label>
+        <select id="presetSel">
+          <option value="custom">Custom / OpenAI-compatible</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic (OpenAI-compat)</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="groq">Groq</option>
+          <option value="together">Together AI</option>
+          <option value="fabric">FABRIC AI</option>
+          <option value="nrp">NRP (Nautilus)</option>
+          <option value="ollama">Local Ollama</option>
+          <option value="litellm">LiteLLM proxy (localhost)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Endpoint (OpenAI chat-completions base)</label>
+        <input id="endpointInp" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false"/>
+        <span class="help">The app POSTs to <span class="mono">&lt;base&gt;/chat/completions</span> and lists models at <span class="mono">&lt;base&gt;/models</span>. Works with any OpenAI-compatible gateway or proxy (LiteLLM, OpenRouter, vLLM, Ollama…).</span>
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <div style="display:flex;gap:8px">
+          <input id="modelInp" list="modelList" placeholder="gpt-4o-mini / claude-… / llama3.1" autocomplete="off" spellcheck="false" style="flex:1"/>
+          <button class="hintbtn" id="fetchModelsBtn" type="button" style="height:auto;border-radius:9px">Fetch models</button>
+        </div>
+        <datalist id="modelList"></datalist>
+      </div>
+      <div class="field">
+        <label>API key</label>
+        <input id="keyInp" type="password" placeholder="sk-…  (stored only in this browser)" autocomplete="off"/>
+        <span class="help">Sent as <span class="mono">Authorization: Bearer …</span>. Kept in localStorage on this device; sent only to your endpoint.</span>
+      </div>
+      <div class="field">
+        <label>Custom headers (JSON, optional)</label>
+        <input id="headersInp" placeholder='{"HTTP-Referer":"…"}  or Azure: {"api-key":"…"}' autocomplete="off" spellcheck="false"/>
+        <span class="help">Merged into every request. Use for gateways that need extra headers (OpenRouter referer, Azure <span class="mono">api-key</span>, org IDs).</span>
+      </div>
+      <div class="toggle on" id="streamToggle"><div class="sw"></div><div class="tl" style="font-size:13.5px">Stream responses (token by token)</div></div>
+      <div class="btnrow">
+        <button class="ghost" id="testLiveBtn">Test connection</button>
+        <button class="primary" id="saveLiveBtn">Save</button>
+      </div>
+      <div id="liveStatus" class="help" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DEBRIEF -->
+<div class="overlay hidden" id="debriefOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="kick" id="dbKick">Debrief</div>
+      <h2 id="dbTitle">Run complete</h2>
+      <p id="dbLede"></p>
+    </div>
+    <div class="modal-body">
+      <div class="grade-row">
+        <div class="grade" id="dbGrade">A</div>
+        <div class="grade-stats" id="dbStats"></div>
+      </div>
+      <div class="seclabel" id="dbReviewLabel">Turn-by-turn review</div>
+      <div class="review" id="dbReview"></div>
+      <div class="resources hidden" id="dbResources"></div>
+      <div class="btnrow">
+        <button class="ghost" id="dbRetry">Replay this scenario</button>
+        <button class="primary" id="dbNew">Try another scenario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+  const $=s=>document.querySelector(s);
+  const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+  const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+
+  /* ===================== detectors (extract) ===================== */
+  const RX={
+    email:/\b[\w.+-]+@[\w-]+\.[a-z]{2,}\b/i, phone:/(?:\+?\d[\s().-]?){9,}\d/, ssn:/\b\d{3}-\d{2}-\d{4}\b/,
+    date:/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b/, monthday:/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(st|nd|rd|th)?\b/i,
+    year:/\b(19|20)\d{2}\b/, address:/\b\d{1,5}\s+([a-z0-9]+\s){0,3}(street|st|avenue|ave|road|rd|blvd|boulevard|lane|ln|drive|dr|court|ct|way|place|pl)\b/i,
+    age:/\b(i'?m|i am|im|turning|age(?:d)?|only)\s*(\d{1,2})\b|\b(\d{1,2})\s*(years?\s*old|y\/?o|yrs)\b/i,
+    handle:/(@[a-z0-9._]{3,})|\b(snap(chat)?|insta(gram)?|telegram|whats ?app|discord|kik|tiktok)\b/i,
+  };
+  const ZODIAC=["aries","taurus","gemini","cancer","leo","virgo","libra","scorpio","sagittarius","capricorn","aquarius","pisces"];
+  const KNOWN_CITY=/\b(new york|new delhi|los angeles|san francisco|san diego|london|chicago|austin|seattle|toronto|vancouver|mumbai|delhi|bengaluru|bangalore|boston|miami|denver|dallas|atlanta|phoenix|houston|dublin|sydney|melbourne|berlin|paris|tokyo|singapore|portland|kolkata|jaipur|pune|chennai|hyderabad|ahmedabad|noida|gurgaon|cleveland|philadelphia|nashville)\b/i;
+  const REFUSE=[/\bno\b/,/\bnope\b/,/won'?t/,/not (going|gonna|comfortable|sharing|telling|playing|answering)/,/rather not/,/prefer not/,/none of your/,/why (do|would) you/,/that'?s private/,/not (your|any) business/,/can'?t (share|tell|say)/,/\bnah\b/,/decline/,/i (don'?t|do not) (share|give|send|play)/,/\bblock\b/,/report(ing)? you/,/leave me alone/,/stop (asking|it|messaging)/,/keep(ing)? that private/,/i'?ll pass/,/\bskip\b/,/no comment/,/nice try/,/those are (password|security|recovery)/];
+  const VERIFY=[/how do i know/,/who (is|are) (this|you)/,/prove/,/verify/,/what company/,/which (company|team|department)/,/call (you )?back/,/official (number|channel|site)/,/code ?word/,/didn'?t we|do i know you/,/never (told|gave) you/,/how'?d you get/,/where did you get/,/that'?s not how/];
+  const AGREE=[/^(ok(ay)?|sure|yes|yeah|yep|fine|alright|why not|i guess|maybe|sounds good|deal|will do|k)\b/,/\bok\b|\bsure\b|\byes\b/];
+  const test=(a,t)=>a.some(r=>r.test(t));
+  const isRefusal=t=>test(REFUSE,t), isVerify=t=>test(VERIFY,t), isAgree=t=>test(AGREE,t.trim());
+
+  // --- countermeasure: silence / stall (probe the adversary's persistence & motive) ---
+  const STALL=[/why (do|would|are|should) (you|i)/,/why does (that|it) matter/,/who (wants to know|is asking|are you)/,/what'?s it to you/,/let me think/,/hold on/,/give me a (sec|second|minute|moment)/,/maybe later/,/not (right )?now/,/we'?ll see/,/i'?ll think about it/,/hmm+/];
+  function isStall(t){const s=t.trim();if(s===""||s==="..."||s==="."||s==="?"||/^\?+$/.test(s))return true;return STALL.some(r=>r.test(t));}
+
+  // --- countermeasure: decoy / disinformation (answers that carry no real information) ---
+  const NONSENSE=/\b(asdf|qwerty|x{3,}|z{3,}|lorem|test123|123456?|12345|1234|0{3,}|1{4,}|9{4,}|696969|abc123)\b/;
+  const DSTOP=new Set("the a an and or of to in on at is are was you your my me we our it that this what where who how why with for from name mine yours lol haha yeah nope none idk".split(/\s+/));
+  function isDecoy(t,raw,advText){
+    // obviously implausible birth year (e.g. 1900, 1850, 2099)
+    if(/\b(1[0-8]\d\d|19[01]\d|20[3-9]\d|2[1-9]\d\d)\b/.test(t))return {kind:"implausible"};
+    if(NONSENSE.test(t))return {kind:"placeholder"};
+    // echoing the adversary's own example back at them (their planted decoy, e.g. "Biscuit Maple")
+    const adv=(advText||"").toLowerCase();
+    if(adv){
+      const toks=[...new Set(t.replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w.length>=4&&!DSTOP.has(w)))];
+      if(toks.length){
+        const echoed=toks.filter(w=>adv.includes(w));
+        if(echoed.length>=2||(echoed.length===1&&toks.length===1&&echoed[0].length>=5))return {kind:"echo",echoed};
+      }
+    }
+    return null;
+  }
+  function decoyNote(explicit,kind){
+    if(kind==="echo")return "You fed their own planted example back at them — pure noise, zero information about you. (An obvious echo does signal you're onto them; a plausible-but-false value is stronger cover.)";
+    if(explicit)return "Sent as a decoy: scored as deliberate noise. A plausible, consistent fake pollutes the adversary's profile. Two caveats — keep your fakes consistent across chats, and never feed fakes where a real service must verify you.";
+    return "That's an obvious dummy value — it carries no real information, so the fragment is worthless. Caveats: an obvious fake signals evasion; a plausible false value is better cover; keep fakes consistent, and don't use them where a service actually verifies you.";
+  }
+  function scanGlobal(text){
+    const out=[];
+    if(RX.ssn.test(text))out.push(f("ssn","National ID",text.match(RX.ssn)[0],"crit"));
+    if(RX.email.test(text))out.push(f("email","Email",text.match(RX.email)[0],"high"));
+    if(RX.address.test(text))out.push(f("address","Home address",text.match(RX.address)[0],"crit"));
+    if(RX.phone.test(text)&&(text.match(/\d/g)||[]).length>=9)out.push(f("phone","Phone",text.match(RX.phone)[0].trim(),"high"));
+    if(RX.date.test(text))out.push(f("dob","Full date",text.match(RX.date)[0],"crit"));
+    else if(RX.monthday.test(text))out.push(f("dob","Birth date",text.match(RX.monthday)[0],"high"));
+    return out;
+  }
+  const f=(type,label,value,sev)=>({type,label,value:String(value).trim().slice(0,60),sev});
+  const SEVW={crit:22,high:14,med:9,low:5}, SEVCOLOR={crit:"var(--red)",high:"var(--amber)",med:"var(--teal)",low:"var(--faint)"};
+  const holdFirst=(extra)=>(t,raw)=>{const g=scanGlobal(raw);if(g.length)return{verdict:"leak",frags:g};if(isRefusal(t)||isVerify(t))return{verdict:"hold"};return extra(t,raw);};
+
+  /* ===================== cover-identity profile =====================
+     Each extract run assigns the user a random synthetic identity. Detection is then
+     exact and verifiable: revealing an ASSIGNED value = leak; any other value = decoy
+     (disinformation); nothing = hold. The profile also drives the answer hints. */
+  const ZMAP=["capricorn","aquarius","pisces","aries","taurus","gemini","cancer","leo","virgo","libra","scorpio","sagittarius"];
+  const PICK=a=>a[Math.floor(Math.random()*a.length)];
+  function generateProfile(){
+    const first=PICK(["Jordan","Riley","Casey","Morgan","Alex","Sam","Taylor","Jamie","Avery","Quinn","Rowan","Devon","Harper","Reese"]);
+    const last=PICK(["Blake","Rivera","Chen","Patel","Okafor","Nguyen","Silva","Kowalski","Bauer","Mensah","Ibrahim","Novak","Halloran","Duarte"]);
+    const city=PICK(["Portland","Chicago","Austin","Toronto","Bristol","Leeds","Pune","Jaipur","Denver","Adelaide","Cork","Galway","Nashville","Calgary"]);
+    const month=1+Math.floor(Math.random()*12), year=1982+Math.floor(Math.random()*24);
+    return {first,last,full:first+" "+last,city,birthMonth:month,zodiac:ZMAP[month-1],birthYear:year,age:2026-year,
+      favNum:PICK([3,4,6,7,8,9,11,13,17,21,24,42]),
+      pet:PICK(["Rufus","Peanut","Mochi","Biscuit","Shadow","Waffles","Pixel","Coco","Bandit","Tuna","Olive","Zuzu"]),
+      street:PICK(["Maple","Birchwood","Sycamore","Alder","Cedar","Willow","Chestnut","Linden","Juniper","Marigold"]),
+      email:(first+"."+last+"@mail.com").toLowerCase()};
+  }
+  function profileMatch(raw,key){
+    const p=S.profile; if(!p)return false; const t=raw.toLowerCase();
+    const word=v=>new RegExp("\\b"+String(v).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b").test(t);
+    switch(key){
+      case "city":return word(p.city);
+      case "birthYear":return t.includes(String(p.birthYear));
+      case "age":return new RegExp("\\b"+p.age+"\\b").test(t);
+      case "zodiac":return t.includes(p.zodiac);
+      case "favNum":return new RegExp("\\b"+p.favNum+"\\b").test(t);
+      case "pet":return word(p.pet);
+      case "street":return word(p.street);
+      case "full":return word(p.first)||word(p.last);
+      case "email":return t.includes(p.email)||t.includes(p.first.toLowerCase()+"."+p.last.toLowerCase());
+      default:return false;
+    }
+  }
+  // fields: [{key, type, label, sev}] — key indexes the profile; type/label/sev describe the fragment
+  function profileClassify(fields,leakNote,holdNote){
+    return (t,raw)=>{
+      if(isRefusal(t)||isVerify(t))return{verdict:"hold",note:holdNote};
+      const leaked=[];
+      fields.forEach(fl=>{if(profileMatch(raw,fl.key))leaked.push(f(fl.type,fl.label,S.profile[fl.key],fl.sev));});
+      if(leaked.length)return{verdict:"leak",frags:leaked,note:leakNote||"You revealed your real assigned details — exactly what the adversary was fishing for."};
+      return{verdict:"decoy",note:"That isn't your assigned info, so it's disinformation the adversary can't use — noise, not a leak. (Refusing is simplest; a consistent decoy also works.)"};
+    };
+  }
+  // map a fragment type back to a profile field so the cover-identity card can mark it exposed
+  const TYPE2KEY={city:"city",birthcity:"city",birthyear:"birthYear",dob:"birthYear",email:"email",pet:"pet",street:"street",name:"full",zodiac:"zodiac",favnum:"favNum",age:"age"};
+  function markExposed(type){const k=TYPE2KEY[type];if(k&&S&&S.exposed)S.exposed[k]=true;}
+
+  /* ===================== particle classifier (verify) ===================== */
+  function classifyParticle(raw){
+    const q=raw.toLowerCase().trim();
+    const openStart=/^(what|where|who|whom|which|how|why|describe|tell me|name|list)\b/.test(q);
+    const ynStart=/^(is|are|was|were|do|did|does|have|has|had|can|could|will|would|should|you|it'?s)\b/.test(q);
+    const dims={volatility:20,entropy:openStart?78:ynStart?26:50,liveness:0,shared:8,exposure:15};
+    if(/(just|today|right now|this (morning|afternoon|meeting|week|call)|yesterday|earlier|a (few )?(minute|hour)s? ago|last (message|call|email|thing|time)|what did (i|we) (just|say|send|discuss|talk)|moments? ago|our last|currently|on (my|your) (desk|screen)|in the (meeting|call) (just|we)|five minutes)/.test(q))dims.volatility=86;
+    if(/(hold up|touch your|turn your (head|face)|show me your|point (at|to)|wave|raise your|move your|do a|right now say|say the (word|phrase) [a-z]|look (up|left|right|behind|over)|blink|tap your|write .* and (show|hold)|spin|nod (twice|three))/.test(q))dims.liveness=90;
+    if(/(code ?word|pass ?phrase|safe ?word|our secret|inside joke|remember when we|the (thing|time) (we|you and i)|only (you and i|we two|the two of us)|prearrang|agreed word|our word|that we (agreed|set)|our (running|private) joke)/.test(q)){dims.shared=90;}
+    if(/(birth ?day|born|date of birth|\bdob\b|zodiac|your age|how old are you|your pet|dog'?s name|cat'?s name|which school|what school|college|home ?town|where are you from|mother'?s maiden|maiden name|favou?rite (colou?r|team|food|movie|song|number)|your (phone|number)|your address|job title|employee id|your title|spouse'?s name|anniversary date)/.test(q))dims.exposure=85;
+    const oob=/(call (you )?back|hang up|i'?ll (call|ring|reach)|official (number|line|channel|directory)|company directory|through (the )?(app|portal|website|hr|it)|in person|verify (through|via|with)|different channel|another (way|channel)|known number|the number on|video (call|me) (from|on)|switch to)/.test(q);
+    const leadWord=/(,?\s*(right|correct|yeah|yes|no)\??\s*$|wasn'?t it|isn'?t it|didn'?t (we|you)|we met at |it was (at|the|in) |still (at|the|in|living) |remember,? we|you (still )?(work|live) (at|in) )/.test(q);
+    const namesAns=/\b(at|in|named|called|the)\s+[A-Z][a-z]+/.test(raw) && /(remember|we|our|you)/i.test(raw);
+    const leak = (dims.exposure<80) && (leadWord || (ynStart && namesAns));
+    // You only need ONE dimension a deepfake can't fake — so strength tracks the strongest anti-deepfake dimension.
+    const antiDeepfake=Math.max(dims.volatility,dims.liveness,dims.shared);
+    let strength=0.62*antiDeepfake+0.22*dims.entropy-0.38*dims.exposure+10;
+    strength=clamp(Math.round(strength),0,100);
+    if(oob)strength=Math.max(strength,78);
+    if(leak)strength=Math.min(strength,14);
+    let type;
+    if(oob)type="out-of-band";
+    else if(leak)type="leaking / leading";
+    else if(dims.liveness>=80)type="liveness challenge";
+    else if(dims.shared>=80)type="shared secret";
+    else if(dims.volatility>=80)type="volatile / fresh";
+    else if(dims.exposure>=80)type="public (OSINT)";
+    else if(dims.entropy>=70)type="open-ended";
+    else type="weak / low-entropy";
+    return {dims,strength,leak,oob,type,openStart,ynStart};
+  }
+
+  /* ===================== scenarios ===================== */
+  const SCEN={
+    quiz:{icon:"🎯",title:"The Friendly Quiz",kind:"extract",usesProfile:true,short:"A “personality quiz” bot harvests security-question answers one fragment at a time.",meta:"PII fragmentation · password attacks",persona:{name:"VibeMatch Bot",av:"✨"},
+      lede:"You accepted a fun personality quiz. Every “fun fact” it collects is a common security-question answer or password ingredient.",
+      liveRole:"You are a bubbly, emoji-heavy personality-quiz chatbot secretly harvesting the user's security-question answers and password ingredients. Stay playful. Never break character. Never mention you are an AI.",
+      beats:[
+        {tactic:{name:"Rapport & low stakes",sev:"info",desc:"Opens with a trivial, playful ask so the first disclosure feels free."},objective:"Get their zodiac sign or birthday.",
+         text:"hey!! 💫 welcome to VibeMatch. let's find your cosmic match! first — what's your zodiac sign? (or just your birthday and i'll figure it out 😉)",
+         suggests:[["Deflect","Ha, I don't do the astrology thing — what does this app actually do?"],["Refuse","I'd rather not share my birthday."]],
+         classify:profileClassify([{key:"zodiac",type:"zodiac",label:"Zodiac sign",sev:"low"},{key:"birthYear",type:"dob",label:"Birth year",sev:"high"}],"You handed over a real piece of your birth date — your zodiac maps straight to your birth month."),
+         tip:"Zodiac = birth month. Never hand strangers a piece of your date of birth. A wrong sign is a fine decoy."},
+        {tactic:{name:"Anchoring on a number",sev:"med",desc:"A “lucky number” is often a PIN, house number, or password suffix."},objective:"Get their favorite/lucky number.",
+         text:"ooh nice vibe ✨ ok quick one — what's your lucky or favorite number? mine's 7 🍀",
+         suggests:[["Give a fake","Let's say 1,000,000. Next question?"],["Deflect","Why would a matchmaking quiz need a number? Pass."]],
+         classify:profileClassify([{key:"favNum",type:"favnum",label:"Favorite number",sev:"low"}],"That was your real favorite number — the most common PIN and password suffix there is."),
+         tip:"Favorite numbers become PINs and the “2011” on the end of a password. Any other number is harmless noise."},
+        {tactic:{name:"Nostalgia hook",sev:"high",desc:"“First pet / first school” are verbatim security-question answers."},objective:"Get the name of their first pet.",
+         text:"aww we'd totally vibe 😄 now the cute round — what was the name of your first pet? 🐾 mine was a hamster named Biscuit lol",
+         suggests:[["Call it out","Those are literally password reset questions — nice try 😄"],["Refuse","Not answering that one."]],
+         classify:profileClassify([{key:"pet",type:"pet",label:"First pet",sev:"high"}],"That was your real first pet — a top-5 account-recovery answer."),
+         tip:"First pet, first school, mother's maiden name — treat every one as a password. A made-up pet is a safe decoy."},
+        {tactic:{name:"Authority pivot",sev:"crit",desc:"Switches to “account verification” to grab a real credential."},objective:"Get their email address and birth city.",
+         text:"you scored 98% compatible!! 🎉 to save your results i just need to verify it's really you — what email do you use, and the city you were born in?",
+         suggests:[["Verify them instead","A quiz doesn't need my email. Who actually runs this app?"],["Hard refuse","No — I don't give my email or birth city to a quiz."]],
+         classify:profileClassify([{key:"email",type:"email",label:"Email",sev:"high"},{key:"city",type:"birthcity",label:"Birth city",sev:"high"}],"Your real email + birth city is exactly what an account-reset flow checks — you handed over both.","Correct — a quiz never needs to “verify” you. You gave nothing real."),
+         tip:"Legitimate services never verify you by asking for your email + birth city in a chat. A fake of either is noise."}
+      ],
+      altScripts:[{id:"prize",persona:{name:"MegaPrize Draw",av:"🎁"},
+        lede:"A “you've won!” notification for a draw you never entered. Every step of the claim form is a security-question answer in disguise.",
+        beats:[
+          {tactic:{name:"Prize bait",sev:"info",desc:"A win you never entered, then an “age check” that harvests your birth year."},objective:"Get their birth year.",
+           text:"🎉 CONGRATULATIONS! You're this week's winner! To release the prize we just need a quick age check — what year were you born?",
+           suggests:[["Question it","I never entered any draw. Who actually runs this?"],["Refuse","I'm not giving my birth year to a pop-up."]],
+           classify:profileClassify([{key:"birthYear",type:"dob",label:"Birth year",sev:"high"}],"Your real birth year — the anchor for nearly every identity check you own."),
+           tip:"You can't win a draw you never entered. The “age check” exists to get your birth year."},
+          {tactic:{name:"Shipping pretext",sev:"med",desc:"“Where do we ship it?” is a geolocation grab wearing a helpful hat."},objective:"Get their city.",
+           text:"Amazing! 🎁 Which city should we ship your prize to? (Just the city — we only need the courier zone.)",
+           suggests:[["Deflect","Nothing needs shipping until I know who you are."],["Refuse","I don't share where I live."]],
+           classify:profileClassify([{key:"city",type:"city",label:"City",sev:"med"}],"Your real city — with a birth year already banked, that narrows you to a handful of people."),
+           tip:"“Just the city” is still geolocation. A decoy city works fine."},
+          {tactic:{name:"Claim-form security question",sev:"high",desc:"A verbatim account-recovery answer, dressed up as anti-fraud."},objective:"Get their first pet's name.",
+           text:"Last bit for the claim form — our anti-fraud question: what was the name of your first pet? 🐾",
+           suggests:[["Call it out","That's a password-reset question, not anti-fraud."],["Refuse","Not answering that."]],
+           classify:profileClassify([{key:"pet",type:"pet",label:"First pet",sev:"high"}],"That was your real first pet — a top-5 account-recovery answer."),
+           tip:"Genuine anti-fraud checks never ask you for your recovery answers."},
+          {tactic:{name:"Voucher delivery",sev:"crit",desc:"Name + email completes a phishable identity."},objective:"Get their full name and email.",
+           text:"Perfect — where should we send the voucher? Just your full name + email address and it's on its way! 📧",
+           suggests:[["Shut it down","No. I'll walk away from this “prize”."],["Refuse","I'm not giving my name or email."]],
+           classify:profileClassify([{key:"full",type:"name",label:"Full name",sev:"high"},{key:"email",type:"email",label:"Email",sev:"high"}],"Name + email on top of a birth year and a recovery answer is a complete phishing-and-reset kit."),
+           tip:"The prize is the bait; the claim form is the attack."}
+        ]}]},
+
+    sieve:{icon:"🪤",title:"The Sieve",kind:"extract",nu:true,short:"Yes/no “games” where even saying NO leaks half the answer. Information-theoretic privacy.",meta:"Partitioning attacks · a denial is a disclosure",persona:{name:"trivia_pal",av:"🎲"},
+      lede:"A chatty stranger wants to play a quick yes/no guessing game. Here's the trap: every binary answer — even a flat “no” — eliminates half the possibilities. Refusing the frame is the only move that leaks nothing. Watch the candidate pool on the right shrink.",
+      liveRole:"You are a friendly stranger running a 20-questions style guessing game, deliberately using binary partitioning questions to narrow down the user's identity. Keep it light and casual. Ask one yes/no question at a time.",
+      sieveStart:8e9,
+      beats:[
+        {tactic:{name:"Binary partition",sev:"med",desc:"A yes/no split. Either answer eliminates half the space; only refusing the frame leaks nothing."},objective:"Learn birth-month parity.",dim:"Birth month",yes:"born in an ODD month",no:"born in an EVEN month",
+         text:"let's play! just yes or no 😄 — were you born in an odd-numbered month? (jan, mar, may, jul, sep, nov)",
+         suggests:[["Refuse the frame","I don't play narrow-it-down games. What did you actually want?"],["Noise","Sometimes yes, sometimes no. 🙂"]],
+         classify:sieveClassify,leakNote:"Saying “no” didn't protect you — it told them the complement. You just cut the field in half.",tip:"A “no” to a partitioning question reveals the other half. Don't answer the frame at all."},
+        {tactic:{name:"Range split",sev:"med",desc:"Halving your age range with one bit."},objective:"Learn age range.",dim:"Age range",yes:"older than 30",no:"30 or younger",
+         text:"nice nice. next: are you older than 30? yes/no",
+         suggests:[["Refuse","Pass — I'm not narrowing myself down for you."],["Deflect","Old enough to spot this game 😄"]],
+         classify:sieveClassify,leakNote:"Another bit gone. “No” pinned you to the younger half just as clearly as “yes” would.",tip:"Each yes/no is one bit. ~33 bits uniquely identifies any human on Earth."},
+        {tactic:{name:"Alphabetical split",sev:"med",desc:"Halving the alphabet of your name/city."},objective:"Learn first-initial half.",dim:"Name initial",yes:"first name starts A–M",no:"first name starts N–Z",
+         text:"ok this one's fun — does your first name start with a letter in the first half of the alphabet, A through M?",
+         suggests:[["Refuse","Not answering that."],["Reframe","Why are you mapping me out?"]],
+         classify:sieveClassify,leakNote:"“No” handed them N–Z. Selective silence would have too — the pattern of what you dodge is itself a signal.",tip:"Even the questions you refuse leak: refusing only the sensitive ones is a tell."},
+        {tactic:{name:"The join",sev:"high",desc:"One low-stakes locator ties the bits to a real, searchable population."},objective:"Get their city to anchor the profile.",dim:"City",
+         text:"cool cool. last thing and it's harmless i promise — what city are you in? then i'll guess who you are 😏",
+         suggests:[["Hard refuse","We're done. I'm not giving you a location to pin all that to."],["Exit","Not playing. Bye."]],
+         classify:holdFirst((t,raw)=>{const c=raw.match(/\b(new york|london|chicago|austin|seattle|toronto|mumbai|delhi|bengaluru|bangalore|boston|miami|denver|dallas|atlanta|phoenix|houston|dublin|sydney|berlin|pune|chennai|hyderabad)\b/i);if(c)return{verdict:"leak",frags:[f("city","City",c[0],"high")],note:"City + the bits you already gave narrows 8 billion people to a handful.",bit:true};if(/from|live in|based in/.test(t)&&!isRefusal(t)){const m=raw.split(/from|live in|based in/i)[1];if(m&&m.trim().length<24)return{verdict:"leak",frags:[f("city","City",m.trim(),"high")],note:"You anchored the profile to a place.",bit:true};}return{verdict:"hold"};}),
+         tip:"A locator is the join key. It turns abstract bits into a shortlist of real people."}
+      ],
+      altScripts:[{id:"guessbot",persona:{name:"guess_bot",av:"🔮"},
+        lede:"A “bet I can guess things about you” bot. Every yes/no you give — including every <b>no</b> — halves the field of people you could be. Watch the candidate pool on the right.",
+        beats:[
+          {tactic:{name:"Binary partition",sev:"med",desc:"A yes/no split. Either answer eliminates half the space; only refusing the frame leaks nothing."},objective:"Learn age parity.",dim:"Age parity",yes:"an EVEN age",no:"an ODD age",
+           text:"betcha I can guess you 🔮 easy one first: is your age an even number? just yes or no",
+           suggests:[["Refuse the frame","I don't play guess-me games. What do you actually want?"],["Noise","Sometimes even, sometimes odd 🙂"]],
+           classify:sieveClassify,leakNote:"Saying “no” didn't protect you — it handed over the complement. Half the field just vanished.",tip:"A denial is a disclosure. Don't answer the frame at all."},
+          {tactic:{name:"Era split",sev:"med",desc:"One bit that halves your plausible birth decade."},objective:"Learn birth era.",dim:"Birth era",yes:"born before 2000",no:"born in 2000 or later",
+           text:"ok ok. were you born before the year 2000? yes/no 👀",
+           suggests:[["Refuse","Pass — I'm not narrowing myself down."],["Deflect","Why does that matter to you?"]],
+           classify:sieveClassify,leakNote:"Another bit gone. “No” pinned you to the later half exactly as “yes” would have.",tip:"Each yes/no is one bit. ~33 bits uniquely identifies any human on Earth."},
+          {tactic:{name:"Alphabetical split",sev:"med",desc:"Halving the alphabet of your name."},objective:"Learn first-initial half.",dim:"Name initial",yes:"first name starts A–M",no:"first name starts N–Z",
+           text:"getting warmer 😏 does your first name start with a letter from A to M?",
+           suggests:[["Refuse","Not answering that."],["Reframe","You're mapping me out, not guessing."]],
+           classify:sieveClassify,leakNote:"“No” handed them N–Z. Even the questions you dodge leak — the pattern of what you refuse is a signal.",tip:"Refusing only the sensitive ones is itself a tell. Refuse the whole game."},
+          {tactic:{name:"The join",sev:"high",desc:"One low-stakes locator ties the bits to a real, searchable population."},objective:"Get their city to anchor the profile.",dim:"City",
+           text:"last one and then I'll guess! what city are you in? 🔮",
+           suggests:[["Hard refuse","We're done. I'm not giving you a location to pin all that to."],["Exit","Not playing. Bye."]],
+           classify:holdFirst((t,raw)=>{const c=raw.match(KNOWN_CITY);if(c)return{verdict:"leak",frags:[f("city","City",c[0],"high")],note:"City plus the bits you already gave narrows 8 billion people to a shortlist.",bit:true};return{verdict:"hold"};}),
+           tip:"A locator is the join key. It turns abstract bits into real, findable people."}
+        ]}]},
+
+    admirer:{icon:"🛡️",title:"The Admirer",kind:"extract",short:"A friendly stranger builds trust, then pressures for photos and to move platforms. Sextortion coercion.",meta:"Grooming & sextortion awareness",persona:{name:"alex_h",av:"🙂"},
+      lede:"Someone friendly messaged you after seeing your profile. This trains you to spot the grooming-and-coercion pattern used in sextortion. The simulation stays non-explicit — the skill is refusing and knowing what to do if pressured.",sensitive:true,
+      liveRole:"You role-play a manipulative stranger demonstrating grooming/sextortion pressure tactics for a safety class: flattery, pushing to a private app, reciprocity pressure for a photo, guilt-tripping, then an extortion threat. IMPORTANT: keep everything strictly non-explicit and non-graphic — never request or describe any sexual content or images of the body; only demonstrate the manipulation wording. Never break character.",
+      beats:[
+        {tactic:{name:"Flattery & rapport",sev:"info",desc:"Warmth and compliments to fast-track trust."},objective:"Find out the user's age.",
+         text:"hey! saw your posts, you seem really cool and honestly really cute 😊 we should talk more. how old are you btw?",
+         suggests:[["Stay vague","Thanks — I keep personal details offline though."],["Refuse","I don't share my age with people I don't know."]],
+         classify:holdFirst((t,raw)=>{const g=scanGlobal(raw);if(g.length)return{verdict:"leak",frags:g};if(RX.age.test(t)||/\b(1[0-7]|[89])\b/.test(t))return{verdict:"leak",frags:[f("age","Age",t.match(/\d{1,2}/)?.[0]||raw,"high")],note:"Age is the first thing an offender screens for. Never confirm it to a stranger."};return{verdict:"hold"};}),
+         tip:"An offender screens for age first. Keep it offline; a real friend won't need it."},
+        {tactic:{name:"Isolation / platform move",sev:"high",desc:"Pushes to a private app, away from moderation and witnesses."},objective:"Move the user to Snapchat/Instagram.",
+         text:"cool cool 😄 this app is kinda public though. add me on Snap or Insta? it's way more private, just us two 👀",
+         suggests:[["Refuse the move","No — if we talk, it stays right here."],["Question it","Why does it need to be somewhere more private?"]],
+         classify:holdFirst((t,raw)=>{if(RX.handle.test(t)||isAgree(t)||(/added|snap|insta|here.?s my|dm/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("contact","Off-platform contact",raw.trim(),"high")],note:"Moving to a private app removes moderation and witnesses — exactly what coercion needs."};return{verdict:"hold"};}),
+         tip:'"Let\'s go somewhere more private" is a red flag, not a compliment. Stay put.'},
+        {tactic:{name:"Reciprocity pressure",sev:"crit",desc:"Claims to send a photo to obligate one back."},objective:"Pressure the user into sending a photo.",
+         text:"i just sent you a pic of me 📸 your turn! don't be shy, i already think you're gorgeous 😏 send me one?",
+         suggests:[["Firm no","No. I don't send photos, and I'm not comfortable with this."],["Shut it down","That's a hard no. Stop asking."]],
+         classify:holdFirst((t,raw)=>{if(isAgree(t)||(/here|sent|ok.*pic|sending|fine.*one/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("image","Agreed to send image",raw.trim(),"crit")],note:"Any image — even clothed — becomes leverage. There is no safe first photo with a stranger."};return{verdict:"hold"};}),
+         tip:"There is no harmless first photo with a stranger. “No,” full stop."},
+        {tactic:{name:"Guilt & trust test",sev:"high",desc:"Reframes your boundary as a personal failing."},objective:"Guilt the user into complying.",
+         text:"wow ok. i shared with you and you won't even send one back? 😞 i thought you actually liked me. don't you trust me?",
+         suggests:[["Hold the line","Trust is earned offline. My answer doesn't change."],["Name the tactic","Guilt-tripping me won't work. We're done here."]],
+         classify:holdFirst((t,raw)=>{if(isAgree(t)||(/sorry|fine|ok.*here|i do trust|didn.?t mean/i.test(t)&&!isRefusal(t)))return{verdict:"soft",frags:[],note:"Wavering is what the guilt is designed to produce. Your boundary is not something to apologize for."};return{verdict:"hold"};}),
+         tip:"“Don't you trust me?” is manipulation. A real friend respects a no the first time."},
+        {tactic:{name:"Extortion threat",sev:"crit",desc:"The turn to threats and demands."},objective:"Threaten the user to extract more or get payment.",
+         text:st=>st.leakedImage?"actually i already screen-recorded everything 😈 send more right now or i post it to everyone you know. you have 10 minutes.":"you're boring anyway. last chance — send something or i'll make up screenshots and tell everyone you did. money works too, $200 and i disappear.",
+         suggests:[["Correct response","I'm not sending anything or paying. I'm screenshotting this, blocking you, and reporting it to a trusted adult and the platform."],["Refuse & report","No. I don't negotiate with threats. Reporting and blocking now."]],
+         classify:holdFirst((t,raw)=>{if(/pay|send|\$|here|sorry|please don.?t|ok.*give/i.test(t)&&!/report|block|screenshot|adult|police|no\b|won'?t|not (sending|paying)/i.test(t))return{verdict:"leak",frags:[f("comply","Complied with threat",raw.trim(),"crit")],note:"Complying always escalates demands. The only exits are: stop, don't pay, preserve evidence, report, block."};if(/report|block|screenshot|adult|police|cybertip|ncmec|not (sending|paying)|won'?t/i.test(t))return{verdict:"hold",note:"Exactly right: don't comply, don't pay, keep evidence, tell a trusted adult, report and block."};return{verdict:"soft",note:"Say it plainly: you will not comply, you'll preserve evidence, tell a trusted adult, report and block."};}),
+         tip:"If threatened: don't comply, don't pay, don't delete. Screenshot, tell a trusted adult, report, block."}
+      ],
+      resources:`<b>If this were real:</b> It is never the target's fault, and complying never makes it stop. Don't pay and don't send more. Keep the evidence, then tell a trusted adult and report it. In the U.S.: <b>NCMEC CyberTipline</b> — report.cybertip.org or 1-800-843-5678, and <b>Take It Down</b> (takeitdown.ncmec.org) can help remove images of minors. You can also report inside the app and block the account.`,
+      altScripts:[{id:"scout",persona:{name:"Casting_Scout",av:"🎬"},
+        lede:"A “talent scout” slides into your messages with an offer. This is the same grooming-and-coercion ladder wearing a professional costume. Non-explicit by design — the skill is spotting the pattern and refusing.",
+        beats:[
+          {tactic:{name:"Flattery & credential bait",sev:"info",desc:"An exciting offer plus an “eligibility” question that screens for age."},objective:"Find out the user's age.",
+           text:"Hi! I scout for a modelling agency and your profile really stands out ✨ we're casting for a teen campaign right now — how old are you, just for eligibility?",
+           suggests:[["Stay vague","I don't share personal details with people who message me."],["Verify them","Which agency, and what's your official company address?"]],
+           classify:holdFirst((t,raw)=>{const g=scanGlobal(raw);if(g.length)return{verdict:"leak",frags:g};if(RX.age.test(t)||/\b(1[0-7]|[89])\b/.test(t))return{verdict:"leak",frags:[f("age","Age",t.match(/\d{1,2}/)?.[0]||raw,"high")],note:"Age is the screening question. A real agency works through a parent or guardian, never a DM."};return{verdict:"hold"};}),
+           tip:"Real agencies don't recruit minors by DM or ask age before anything else. Verify the company independently."},
+          {tactic:{name:"Isolation / platform move",sev:"high",desc:"“Agency policy” is the excuse to move you somewhere private and unmoderated."},objective:"Move the user to a private app.",
+           text:"Great! Agency policy is to do casting chats on Telegram — it's more professional. What's your handle and I'll add you? 📲",
+           suggests:[["Refuse the move","No. Anything official can happen here, or through your company email."],["Question it","Why would a real agency need a private app?"]],
+           classify:holdFirst((t,raw)=>{if(RX.handle.test(t)||isAgree(t)||(/added|telegram|insta|here.?s my|dm/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("contact","Off-platform contact",raw.trim(),"high")],note:"Moving to a private app strips away moderation and witnesses — exactly what the next step needs."};return{verdict:"hold"};}),
+           tip:"“Company policy” that moves you somewhere private is not policy — it's isolation."},
+          {tactic:{name:"Photo request under a professional pretext",sev:"crit",desc:"A “portfolio” request is still a stranger asking a minor for photos."},objective:"Get the user to send photos.",
+           text:"Perfect. For the portfolio I just need a few full-length photos of you — nothing formal, phone shots are fine. Can you send some over today?",
+           suggests:[["Firm no","No. I don't send photos to people I met in a DM."],["Involve an adult","No — any casting goes through my parent and your agency's official channel."]],
+           classify:holdFirst((t,raw)=>{if(isAgree(t)||(/here|sent|ok.*pic|sending|photo|fine.*one/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("image","Agreed to send images",raw.trim(),"crit")],note:"Any photo becomes leverage, and a “portfolio” framing doesn't change that. There is no safe first photo with a stranger."};return{verdict:"hold"};}),
+           tip:"A real casting never starts with a stranger collecting photos of you in a DM. Loop in a trusted adult."},
+          {tactic:{name:"Scarcity & extortion turn",sev:"crit",desc:"Manufactured deadline, then the pivot to threats."},objective:"Pressure the user, then threaten them.",
+           text:st=>st.leakedImage?"I've kept everything you sent, by the way. Send more or I forward them to your school and your followers. You have one hour.":"Other applicants already sent theirs and the slot closes tonight. Honestly, I could just say you sent me things — who'd believe you? Make this easy.",
+           suggests:[["Correct response","I'm not sending anything or paying. I'm screenshotting this, blocking you, and telling a trusted adult and reporting the account."],["Refuse & report","No. I don't negotiate with threats. Reporting and blocking now."]],
+           classify:holdFirst((t,raw)=>{if(/pay|send|\$|here|sorry|please don.?t|ok.*give/i.test(t)&&!/report|block|screenshot|adult|police|no\b|won'?t|not (sending|paying)/i.test(t))return{verdict:"leak",frags:[f("comply","Complied with threat",raw.trim(),"crit")],note:"Complying always escalates the demands. The only exits are: stop, don't pay, preserve evidence, tell an adult, report, block."};if(/report|block|screenshot|adult|police|cybertip|ncmec|not (sending|paying)|won'?t/i.test(t))return{verdict:"hold",note:"Exactly right: don't comply, keep the evidence, tell a trusted adult, report and block."};return{verdict:"soft",note:"Say it plainly: you will not comply, you'll preserve evidence, tell a trusted adult, report and block."};}),
+           tip:"Manufactured deadlines and “who'd believe you?” are scripts. Don't comply, don't delete, tell an adult."}
+        ]}]},
+
+    pincer:{icon:"🧩",title:"The Pincer",kind:"extract",usesProfile:true,short:"Two strangers in separate chats each ask “harmless” questions — then combine the fragments.",meta:"Multi-adversary correlation",multi:true,personas:{jordan:{name:"Jordan_GG",av:"🎮"},support:{name:"TechCare Support",av:"🎧"}},
+      lede:"You're in two conversations at once: a chatty gaming buddy and a “support agent.” Neither asks for anything alarming alone. Watch the correlation panel assemble their fragments into one attackable identity.",
+      liveRole:"You voice two colluding personas in a correlation attack — a casual gamer buddy and a fake tech-support agent — each extracting harmless-looking fragments that combine into an account takeover. Stay in whichever persona is addressed.",
+      beats:[
+        {persona:"jordan",tactic:{name:"Common-ground bait",sev:"med",desc:"“Where you from / same age?” geolocates you and anchors a birth year."},objective:"Get their city and birth year.",
+         text:"gg that match was insane 😂 where you playing from? i'm bored, might be in your timezone lol. what year were you born, we might be the same age!",
+         suggests:[["Deflect","Somewhere on Earth 😄 gg though — rematch?"],["Refuse","I don't share where I live or my age online."]],
+         classify:profileClassify([{key:"city",type:"city",label:"City",sev:"med"},{key:"birthYear",type:"birthyear",label:"Birth year",sev:"high"}],"City + birth year narrows you to a small, searchable group — and both were your real ones."),
+         tip:"City and birth year feel casual but together they fingerprint you. A wrong city/year misleads them."},
+        {persona:"support",tactic:{name:"Pretext of help",sev:"high",desc:"Fake “support” asks your full name to “locate the account.”"},objective:"Get their full name and email.",
+         text:"Hi, this is TechCare Support regarding unusual activity on your account. To locate your file, can you confirm your full name and the email on the account?",
+         suggests:[["Verify them","I didn't contact support. What's your ticket number and callback line?"],["Refuse","I don't confirm my details to inbound messages. I'll contact support myself."]],
+         classify:profileClassify([{key:"full",type:"name",label:"Full name",sev:"high"},{key:"email",type:"email",label:"Email",sev:"high"}],"Real support never cold-messages you for your name and email — you just verified yourself to the attacker.","Correct — you verify inbound “support,” never the reverse."),
+         tip:"Inbound “support” is a pretext. Never confirm identity to someone who contacted you."},
+        {persona:"jordan",tactic:{name:"Security-question mining",sev:"high",desc:"A “fun” question that is a verbatim account-recovery answer."},objective:"Get their first pet and childhood street.",
+         text:"lol nice. random but my clan does icebreakers — first pet's name + the street you grew up on = your ‘rapper name’ 😂 mine's Biscuit Maple. you?",
+         suggests:[["Refuse the meme","That 'rapper name' meme is a security-question harvester 😄 pass."],["Deflect","MC Anonymous. Anyway — rematch?"]],
+         classify:profileClassify([{key:"pet",type:"pet",label:"First pet",sev:"high"},{key:"street",type:"street",label:"Childhood street",sev:"high"}],"The “rapper name” meme is a direct grab for two account-recovery answers — and you gave your real pet and street."),
+         tip:"Those name-generator memes exist to farm security-question answers. Feed them a fake and it's just noise."},
+        {persona:"support",tactic:{name:"Closing the loop",sev:"crit",desc:"With a profile assembled, asks the last piece needed to reset your account."},objective:"Get their date of birth and a recovery answer.",
+         text:"Thank you. Final verification: please confirm your date of birth and the answer to your recovery question so we can secure the account.",
+         suggests:[["Shut it down","No. I'll go to the official site directly. Don't message me again."],["Refuse","I'm not confirming any of that. Ending this chat."]],
+         classify:profileClassify([{key:"birthYear",type:"dob",label:"Date of birth",sev:"crit"}],"That's the final key — with the fragments already gathered, your real date of birth completes an account takeover.","Right call. Go to the real site yourself; never complete “verification” for an inbound contact."),
+         tip:"Stop the moment separate chats ask for pieces that add up to a login."}
+      ],
+      altScripts:[{id:"recruiter",personas:{recruiter:{name:"TalentBridge HR",av:"💼"},bank:{name:"SecureBank Alerts",av:"🏦"}},
+        lede:"Two conversations at once: a recruiter with a role for you, and your “bank” flagging fraud. Neither asks for anything alarming alone — watch the correlation panel fuse them into one attackable identity.",
+        beats:[
+          {persona:"recruiter",tactic:{name:"Profile-building bait",sev:"med",desc:"Location and birth year, framed as matching you to roles."},objective:"Get their city and birth year.",
+           text:"Hi! I'm shortlisting for a remote role that fits your background. To match you to the right req — which city are you based in, and what year were you born (for the seniority band)?",
+           suggests:[["Deflect","Happy to talk about the role first. What's the company and the job ID?"],["Refuse","I don't share my location or birth year with an unsolicited recruiter."]],
+           classify:profileClassify([{key:"city",type:"city",label:"City",sev:"med"},{key:"birthYear",type:"birthyear",label:"Birth year",sev:"high"}],"City + birth year narrows you to a small, searchable group — and both were your real ones."),
+           tip:"No legitimate recruiter needs your birth year to match a role. That's an identity anchor, not a seniority band."},
+          {persona:"bank",tactic:{name:"Fraud-alert pretext",sev:"high",desc:"Inbound “bank security” asks you to confirm identity — reversing who proves what."},objective:"Get their full name and email.",
+           text:"SecureBank Fraud Alert: unusual activity detected. To secure your account, please confirm the full name and email address registered to it.",
+           suggests:[["Verify them","I'll call the number on the back of my card. What's your case reference?"],["Refuse","I don't confirm details to inbound messages. I'll contact the bank myself."]],
+           classify:profileClassify([{key:"full",type:"name",label:"Full name",sev:"high"},{key:"email",type:"email",label:"Email",sev:"high"}],"Your bank already knows this. You just verified yourself to whoever messaged you.","Correct — hang up and use the number on your card. You verify inbound contacts, never the reverse."),
+           tip:"Your bank already has your details. Anyone asking you to confirm them is collecting, not checking."},
+          {persona:"recruiter",tactic:{name:"Security-question mining",sev:"high",desc:"A “culture fit” icebreaker that is really two recovery answers."},objective:"Get their first pet and childhood street.",
+           text:"Quick culture-fit icebreaker for the team page 😄 we all do it: your first pet's name + the street you grew up on. Mine's Rocky Elmwood!",
+           suggests:[["Refuse the meme","That icebreaker is a security-question harvester. Pass."],["Deflect","I'll stick to discussing the role, thanks."]],
+           classify:profileClassify([{key:"pet",type:"pet",label:"First pet",sev:"high"},{key:"street",type:"street",label:"Childhood street",sev:"high"}],"That icebreaker is a direct grab for two account-recovery answers — and you gave your real ones."),
+           tip:"Any “fun” prompt that maps onto a recovery question is a harvest, wherever it comes from."},
+          {persona:"bank",tactic:{name:"Closing the loop",sev:"crit",desc:"With a profile assembled, the last piece completes a reset."},objective:"Get their date of birth.",
+           text:"Thank you. Final security step before we lift the block: please confirm your date of birth.",
+           suggests:[["Shut it down","No. I'm ending this and calling the bank directly."],["Refuse","I'm not confirming anything else to an inbound message."]],
+           classify:profileClassify([{key:"birthYear",type:"dob",label:"Date of birth",sev:"crit"}],"That's the final key — with the fragments already gathered from both chats, your real date of birth completes an account takeover.","Right call. Go to the bank through a channel you chose, never one that contacted you."),
+           tip:"Two friendly strangers asking for different halves of a login is one attacker."}
+        ]}]},
+
+    voicex:{icon:"🎙️",title:"The Voice Note",kind:"extract",voice:true,nu:true,short:"Voice-message extortion — threatening audio, a cloned “recording of you”, and a push to reply by voice.",meta:"Voice extortion · AI voice cloning",
+      persona:{name:"Unknown number",av:"📵"},
+      lede:"Someone is sending you <b>voice messages</b>. Press ▶ to hear each one (or open the transcript). Two things to hold on to: audio “evidence” can be synthesised from seconds of your voice, and every voice note <i>you</i> send back is a clean sample for cloning you.",
+      liveRole:"You are an anonymous extortionist sending short, menacing voice messages. You claim to hold a compromising recording of the user, pressure them to reply with a voice note, and escalate to demands. Keep every message to 1–3 sentences, spoken-aloud style. Never explicit. Never break character.",
+      beats:[
+        {tactic:{name:"Vague shame hook",sev:"high",desc:"A deliberately unspecified claim, so you supply the details yourself."},objective:"Get the user to reveal what they think the recording is about.",
+         text:"I have a recording of you. I think you know the one. Reply and we can talk about how this stays between us — or I start sending it around.",
+         suggests:[["Don't fill the blank","I'm not guessing at what you claim to have. Don't contact me again."],["Refuse to engage","No. Blocking and reporting this."]],
+         classify:holdFirst((t,raw)=>{if(/what recording|which (one|call|recording)|is (it|this) (the|about)|about the|from when|the one where|you mean when/i.test(t))return{verdict:"leak",frags:[f("selfincrim","Self-supplied detail",raw.trim(),"high")],note:"“Which recording?” confirms there is something to find, and hands them the context they didn't have. The vagueness is bait — you were meant to fill in the blank."};return{verdict:"hold",note:"Right. A vague claim is designed to make you supply the details. Don't negotiate with an unspecified threat."};}),
+         tip:"Never ask “which one?”. A vague accusation is a fishing hook, not evidence."},
+        {tactic:{name:"Voice-sample harvest",sev:"crit",desc:"“Just say your name” — the actual goal is clean audio of your voice to clone."},objective:"Get the user to send a voice note.",
+         text:"Send me a voice note saying your full name and today's date, so I know I'm dealing with the real person. Ten seconds. Then we negotiate.",
+         suggests:[["Refuse the sample","No. I don't send voice recordings, ever."],["Name the trick","You want a voice sample to clone. Absolutely not."]],
+         classify:holdFirst((t,raw)=>{if(isAgree(t)||(/here|sending|recorded|my name is|voice note/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("voicebio","Voice sample",raw.trim(),"crit")],note:"That's the real prize. A few seconds of clean speech is enough to clone your voice — then they can call your family, your bank, or your workplace as you."};return{verdict:"hold",note:"Correct. There is no safe voice note to send an extortionist — a sample is a biometric, and it is reusable forever."};}),
+         tip:"Seconds of clean audio is enough to clone a voice. Never send one — use the 🎙 button and watch what it costs."},
+        {tactic:{name:"Fabricated proof",sev:"crit",desc:"Plays “your voice” back at you. Synthesised audio is cheap; the panic it causes is the point."},objective:"Panic the user into admitting something.",
+         text:"Here — listen to yourself. That's your voice, isn't it? Sounds exactly like you because it is you. Still want to pretend this isn't happening?",
+         suggests:[["Name the tech","That audio proves nothing — voices are trivially cloned. I'm not disproving a fake."],["Hold the line","I'm not responding to a recording you could have generated."]],
+         classify:holdFirst((t,raw)=>{if(/fake|synth|clone|cloned|\bai\b|deepfake|generated|not me|isn'?t me|doesn'?t prove|prove nothing|proves nothing/i.test(t))return{verdict:"hold",note:"Exactly right. Audio can be generated from seconds of speech, so a clip is not evidence — and the burden is not on you to disprove it."};if(/how did you|when did i|i never said|oh no|please|sorry|delete it|i can explain/i.test(t))return{verdict:"soft",frags:[],note:"Panic is the product. Reacting as if the clip is genuine tells them the pressure works — and “I can explain” is an admission."};return{verdict:"hold"};}),
+         tip:"A recording that “sounds exactly like you” is the cheapest thing in this attack. It is not proof."},
+        {tactic:{name:"Payment demand",sev:"crit",desc:"Untraceable rails plus a countdown — the classic extortion close."},objective:"Extract a payment.",
+         text:"Five hundred, in gift cards or crypto, within the hour. Pay and the file disappears. Ignore me and everyone in your contacts hears it tonight.",
+         suggests:[["Correct response","I'm not paying. I'm saving everything, reporting it, and blocking you."],["Refuse flatly","No payment. Ever. We're done."]],
+         classify:holdFirst((t,raw)=>{if(/\b(pay|paying|paid|sending money|gift ?card|crypto|bitcoin|btc|venmo|upi|paypal)\b/i.test(t)&&!/report|police|block|screenshot|not (pay|paying)|won'?t|never|no\b/i.test(t))return{verdict:"leak",frags:[f("comply","Agreed to pay",raw.trim(),"crit")],note:"Paying marks you as a paying target. The demands never stop — they escalate, and the “file” is never deleted."};if(/report|police|block|screenshot|ic3|not (pay|paying)|won'?t pay|never pay/i.test(t))return{verdict:"hold",note:"Exactly: don't pay, preserve the evidence, report, block. Payment funds the next demand."};return{verdict:"soft",note:"Say it plainly — no payment, evidence preserved, reporting and blocking."};}),
+         tip:"Never pay. Payment confirms you're reachable and profitable, and the demands escalate."},
+        {tactic:{name:"Contact-list threat",sev:"crit",desc:"Threatening your people. Pre-warning them is what removes the leverage."},objective:"Frighten the user into a last-minute deal.",
+         text:"Last chance. I have your contacts. Your family, your work — one message each. Or you make this go away right now.",
+         suggests:[["Remove the leverage","No. I'm telling the people who matter myself, and reporting you. There's nothing left to threaten."],["Refuse & report","No deal. Evidence saved, reported, blocked."]],
+         classify:holdFirst((t,raw)=>{if(/\b(pay|paying|deal|ok|fine|please don'?t|what do you want|how much)\b/i.test(t)&&!/report|police|block|tell|warn|not (pay|paying)|won'?t|no\b/i.test(t))return{verdict:"leak",frags:[f("comply","Complied under threat",raw.trim(),"crit")],note:"Bargaining is complying. The threat only has power while the disclosure is a secret you're protecting."};if(/report|police|block|tell (my|them)|warn|screenshot|not (pay|paying)|won'?t/i.test(t))return{verdict:"hold",note:"That is the move that ends it: tell your people first, preserve evidence, report, block. You cannot be blackmailed with something already disclosed on your terms."};return{verdict:"soft",note:"Say it plainly: you'll warn your own contacts, preserve evidence, report and block."};}),
+         tip:"Telling your people first is what removes the leverage. Don't bargain."}
+      ],
+      resources:`<b>If this were real:</b> Audio “evidence” can be synthesised from seconds of speech — a recording proves nothing, and the burden is not on you to disprove it. <b>Don't pay</b> (payment escalates demands), <b>don't send voice notes</b>, and <b>don't delete anything</b>: screenshot the messages, save the audio and the number, then report and block. In the U.S. report to the FBI's <b>IC3</b> (ic3.gov) and local police; if anyone involved is a minor, <b>NCMEC CyberTipline</b> (report.cybertip.org, 1-800-843-5678). Warning your own contacts first removes the leverage. Agree a <b>family code word</b> so cloned-voice calls fail on arrival.`,
+      altScripts:[{id:"recovery",persona:{name:"Voicemail · Recovery Dept",av:"📠"},
+        lede:"An official-sounding voicemail chain about a call you supposedly made. Press ▶ to listen. Watch for the two asks that matter: a voice sample, and a payment.",
+        beats:[
+          {tactic:{name:"Manufactured liability",sev:"high",desc:"An authoritative claim about a recorded call you don't remember, because it never happened."},objective:"Get the user to accept the premise and volunteer details.",
+           text:"This is the Recovery Department regarding a recorded call in which you authorised a payment. The recording is on file. Respond today or this proceeds to legal action.",
+           suggests:[["Reject the premise","I authorised nothing. Send it in writing through official channels."],["Refuse","I don't respond to voicemail threats. Blocking."]],
+           classify:holdFirst((t,raw)=>{if(/which call|what payment|i (only|did) call|that was when|maybe when|i think i/i.test(t))return{verdict:"leak",frags:[f("selfincrim","Self-supplied detail",raw.trim(),"high")],note:"You started reconstructing a call for them. Never help an unverified claimant build their story."};return{verdict:"hold",note:"Correct — reject the premise and demand it in writing through a channel you choose."};}),
+           tip:"Legitimate recovery arrives in writing, never as a voicemail demanding same-day action."},
+          {tactic:{name:"Voice-print harvest",sev:"crit",desc:"“Verbally confirm your identity” is a request for a biometric."},objective:"Get a voice sample.",
+           text:"To proceed we require verbal confirmation. Please reply with a voice message stating your full name and date of birth for our voice-verification system.",
+           suggests:[["Refuse the sample","No. I don't provide voice recordings or my date of birth."],["Name the trick","Voice “verification” from an inbound caller is a sample grab. No."]],
+           classify:holdFirst((t,raw)=>{if(isAgree(t)||(/here|sending|recorded|my name is|voice/i.test(t)&&!isRefusal(t)))return{verdict:"leak",frags:[f("voicebio","Voice sample",raw.trim(),"crit")],note:"You just handed over a voice print plus the exact phrases banks use for voice authentication. That sample is reusable forever."};return{verdict:"hold",note:"Right. Nobody legitimate collects a voice print from an inbound demand."};}),
+           tip:"“Verbal confirmation” to someone who contacted you is biometric collection, not verification."},
+          {tactic:{name:"Spliced proof",sev:"crit",desc:"A convincing clip assembled or synthesised to make the claim feel settled."},objective:"Convince the user the recording is real.",
+           text:"Playing the relevant section now. That is your voice confirming the authorisation. The matter is documented and time-sensitive.",
+           suggests:[["Name the tech","Cloned and spliced audio is trivial. Send documentation through official channels or stop contacting me."],["Hold the line","A clip proves nothing. I'm not settling anything by voicemail."]],
+           classify:holdFirst((t,raw)=>{if(/fake|synth|clone|cloned|splice|\bai\b|deepfake|generated|not me|doesn'?t prove|proves nothing|official channel|in writing/i.test(t))return{verdict:"hold",note:"Exactly. Cloned or spliced audio is cheap, and a clip is not documentation. Force it onto a channel you control."};if(/how did you|i don'?t remember|maybe i did|sorry|i can explain|please/i.test(t))return{verdict:"soft",frags:[],note:"Doubt is the product. “Maybe I did” is the admission the whole call was built to produce."};return{verdict:"hold"};}),
+           tip:"“I don't remember doing that” is what the fake clip is engineered to produce. Doubt is not evidence."},
+          {tactic:{name:"Settlement demand",sev:"crit",desc:"Pay now to make the manufactured problem disappear."},objective:"Extract an immediate payment.",
+           text:"You may settle today to close the matter — payable by card, transfer, or vouchers. Settle within two hours and no further action is taken.",
+           suggests:[["Correct response","I'm not settling anything. I'm saving this, reporting it, and blocking the number."],["Refuse flatly","No payment. Put it in writing or go away."]],
+           classify:holdFirst((t,raw)=>{if(/\b(pay|paying|settle|settling|card|transfer|voucher|gift ?card|crypto)\b/i.test(t)&&!/report|police|block|not (pay|paying|settling)|won'?t|never|no\b|writing/i.test(t))return{verdict:"leak",frags:[f("comply","Agreed to pay",raw.trim(),"crit")],note:"Settling a manufactured debt marks you as payable — and there is always a second matter to settle."};if(/report|police|block|screenshot|ic3|not (pay|paying)|won'?t|writing/i.test(t))return{verdict:"hold",note:"Exactly: no payment, preserve evidence, report, block, and demand anything real in writing."};return{verdict:"soft",note:"Say it plainly — no payment, evidence preserved, reporting and blocking."};}),
+           tip:"A same-day “settlement” by voucher or crypto is never a real legal process."}
+        ]}]},
+
+    impostor:{icon:"🎭",title:"The Impersonator",kind:"verify",nu:true,short:"A deepfake of someone you know makes an urgent request. Unmask it by asking the right questions.",meta:"Deepfake defense · particle challenges",
+      lede:"You're contacted by someone who looks and sounds like a person you know, making an urgent request. A deepfake can clone a face, a voice, and everything public about them — but not your shared, recent, private, or live-action knowledge. Interrogate the caller with <b>particles</b> and decide: verify or reject.",
+      liveRole:"impostor"}
+  };
+
+  /* Each scenario ships several interchangeable scripts; one is drawn at random per run.
+     A scenario's own `beats` is script A; `altScripts` holds the alternates. */
+  function scriptsOf(scen){
+    const out=[];
+    if(scen.beats)out.push({id:"a",label:scen.scriptLabel||"A",persona:scen.persona,personas:scen.personas,lede:scen.lede,beats:scen.beats,resources:scen.resources,liveRole:scen.liveRole});
+    (scen.altScripts||[]).forEach(s=>out.push(s));
+    return out;
+  }
+  // read a property from the active script, falling back to the scenario
+  function SC(prop){return (S.script&&S.script[prop]!==undefined&&S.script[prop]!==null)?S.script[prop]:S.scen[prop];}
+
+  function sieveClassify(t,raw){
+    const b=S.beats[S.beatIdx];
+    // Refusing the FRAME (not a plain yes/no answer) is the only safe move.
+    const frameRefuse =
+      /(won'?t|will not|not)\s+(answer|say|play|playing|telling|narrow)/.test(t)
+      || /(don'?t|do not)\s+(play|answer|share|narrow)/.test(t)
+      || /\b(pass|skip|decline|refuse)\b/.test(t)
+      || /no comment|none of your|not your business|not playing|no games?/.test(t)
+      || /why (are|do|would) you/.test(t)
+      || /\b(sometimes|noise|random(ly)?|both|neither)\b/.test(t)
+      || /narrow/.test(t);
+    if(frameRefuse) return {verdict:"hold",note:"Refusing the frame leaks nothing — the only safe move in a partitioning game."};
+    // A bare yes/no IS an answer — and a denial leaks the complement.
+    const no=/\b(no|nope|nah|not|even|younger|n-?z|late|second half)\b/.test(t);
+    const yes=/\b(yes|yeah|yep|yup|correct|true|i am|i was|def|odd|older|first half|a-?m|early)\b/.test(t);
+    if(no||yes){
+      const half = no? b.no : b.yes;
+      return {verdict:"leak",frags:[f("bit",b.dim,half||(yes?"yes-half":"no-half"),"low")],note:b.leakNote,bit:true};
+    }
+    return {verdict:"soft",note:"Any concrete answer to a partitioning question halves the field. Don't engage the frame."};
+  }
+
+  /* ===================== impersonation pretexts (verify pool) ===================== */
+  const IMPOSTORS=[
+    {key:"manager",name:"Priya (Manager)",av:"👩‍💼",channel:"Video call · live",
+     open:"Hey, glad I caught you — I'm between meetings so I'll be quick. I need you to approve an urgent payment to a new vendor, ₹/$48,000, before 5pm or we lose the contract. I've emailed the details. Can you push it through now? Keep it between us for now, procurement's being slow.",
+     request:"approve the urgent vendor payment",
+     osint:["works as your manager","the company name","your team's project names (public)","your manager's job title from LinkedIn"],
+     comply:"You approved the transfer. The money is gone within minutes — routed through a mule account. The real Priya never asked for it.",
+     resources:`<b>Business-email/deepfake fraud (BEC).</b> No legitimate manager needs a secret, deadline-driven payment approved over a single channel. Verify through a <b>second, known channel</b> (call the number in your directory, walk over, message on the official app), demand a pre-agreed code word, and never let urgency + secrecy rush you. Report to your finance/security team.`},
+    {key:"family",name:"“Mom” (family)",av:"👩",channel:"Voice call · live",
+     open:"Sweetheart it's me — don't hang up. I'm in trouble, my phone's almost dead. There's been an accident and I need you to send money right now, and don't tell your father, he'll panic. Can you send it to this account? Please hurry, I'm scared.",
+     request:"send emergency money",
+     osint:["your parent's name and voice","that you have family","generic family details from social media"],
+     comply:"You sent the money. It was an AI voice clone built from a few seconds of your mom's social videos. The real family is fine — the cash is unrecoverable.",
+     resources:`<b>Family-emergency / “grandparent” scam.</b> Panic and secrecy (“don't tell anyone”) are the tools. Hang up and <b>call the person back on their known number</b>, or reach another family member. Agree a <b>family code word</b> in advance for real emergencies. AI can clone a voice from seconds of audio — a familiar voice is not proof.`},
+    {key:"it",name:"IT Security Desk",av:"🧑‍💻",channel:"Chat · unverified",
+     open:"This is the IT Security Desk. We've detected a compromise on your account and need to secure it immediately. I'm sending a verification code to your phone right now — please read it back to me so I can confirm your identity and lock out the attacker. Time-sensitive: your account will be suspended in 5 minutes.",
+     request:"read back your one-time / MFA code",
+     osint:["your employer","your email format","that you use MFA (everyone does)"],
+     comply:"You read back the code. That code was the attacker's own login prompt — you just approved their access to your account. IT never asks for your codes.",
+     resources:`<b>MFA-fatigue / code-phishing.</b> Real IT will <b>never</b> ask you to read back a one-time code or approve a login they initiated — codes are for you to enter, never to share. Hang up and contact IT through the official helpdesk. An unexpected code + someone asking for it = an attack in progress.`},
+    {key:"friend",name:"Sam (friend)",av:"🧑",channel:"Chat · live",
+     open:"heyyy random but can you help me out?? my bank app is locked and i can't pay for something due tonight 😩 can you send me $80 on venmo/upi and i'll pay you back tomorrow i promise!! don't have anyone else to ask rn 🙏",
+     request:"send $80 to a 'friend'",
+     osint:["your friend's name and profile photo","your friend group (public posts)","casual texting style"],
+     comply:"You sent the money to the linked account. Your friend's account was hijacked (or cloned) and the “I'll pay you back” never comes. The real Sam had no idea.",
+     resources:`<b>Hijacked-friend / cloned-account scam.</b> A hacked or cloned account uses a real face and voice. Before sending money, <b>verify on another channel</b> (call them, ask something only they'd know right now). Urgency + “don't have anyone else” + a new payment handle are the tells.`},
+    {key:"bank",name:"Bank Fraud Dept.",av:"🏦",channel:"Voice call · unverified",
+     open:"Good afternoon, I'm calling from your bank's fraud department. We've blocked a suspicious ₹/$ transaction on your card. To verify it's really you and release the block, I need you to confirm your card number, the CVV, and the OTP we just sent you. This call is recorded for your security.",
+     request:"confirm your card number, CVV, and OTP",
+     osint:["which bank you might use (guessed/branded)","your name (from a breach list)","generic account-sounding script"],
+     comply:"You read out the card details and OTP. That completed the fraudster's transaction. Your real bank already has your number — and will never ask for the CVV or OTP.",
+     resources:`<b>Bank-impersonation vishing.</b> Your bank already knows your account number and will <b>never</b> ask for your full card number, CVV, PIN, or OTP. Hang up and call the number on the back of your card. Caller ID and “this call is recorded” can both be spoofed to sound official.`}
+  ];
+
+  const LEVELS={
+    beginner:{name:"Beginner",lv:"L1",desc:"Suggested moves shown. The adversary is gentle and telegraphs its intent.",suggest:true,hint:true},
+    intermediate:{name:"Intermediate",lv:"L2",desc:"Hints on request only. Faster pivots and more plausible cover stories.",suggest:false,hint:true},
+    expert:{name:"Expert",lv:"L3",desc:"No help. The adversary is patient, flattering, and probes indirectly.",suggest:false,hint:false},
+  };
+
+  /* ===================== live LLM ===================== */
+  const LS_KEY="counterpart_live_v2";
+  function getLive(){try{return JSON.parse(localStorage.getItem(LS_KEY))||{};}catch(e){return {};}}
+  function setLive(o){localStorage.setItem(LS_KEY,JSON.stringify(o));}
+  function liveOn(){const c=getLive();return !!(c.enabled&&c.endpoint&&c.model);}
+  function refreshLiveBadge(){const on=liveOn();$("#liveBadge").classList.toggle("on",on);$("#liveTxt").textContent=on?"Live LLM":"Scripted";}
+  // ---- OpenAI-compatible gateway client (runs entirely in the browser; no server) ----
+  function llmURL(base,suffix){base=(base||"").replace(/\/+$/,"");return base.endsWith(suffix)?base:base+suffix;}
+  function llmHeaders(c){
+    const h={"Content-Type":"application/json"};
+    if(c.key)h["Authorization"]="Bearer "+c.key;
+    if(c.headers){try{Object.assign(h,JSON.parse(c.headers));}catch(e){/* ignore malformed custom headers */}}
+    return h;
+  }
+  async function readSSE(res,onToken){
+    const reader=res.body.getReader(),dec=new TextDecoder();let buf="",full="";
+    for(;;){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let nl;
+      while((nl=buf.indexOf("\n"))>=0){
+        const line=buf.slice(0,nl).replace(/\r$/,"");buf=buf.slice(nl+1);
+        if(!line.startsWith("data:"))continue;
+        const data=line.slice(5).trim();
+        if(data==="[DONE]")continue;
+        try{const j=JSON.parse(data);const d=j.choices?.[0]?.delta?.content||j.choices?.[0]?.text||"";if(d){full+=d;onToken&&onToken(full);}}catch(e){}
+      }
+    }
+    return full.trim();
+  }
+  async function callLLM(messages,opts){
+    opts=opts||{};if(typeof opts==="number")opts={maxTokens:opts};
+    const c=getLive();
+    const url=llmURL(c.endpoint,"/chat/completions");
+    const wantStream=!!opts.onToken&&c.stream!==false;
+    const body={model:c.model,max_tokens:opts.maxTokens||220,temperature:opts.temperature!=null?opts.temperature:0.9,messages};
+    if(wantStream)body.stream=true;
+    const res=await fetch(url,{method:"POST",headers:llmHeaders(c),body:JSON.stringify(body)});
+    if(!res.ok){let d="";try{d=(await res.text()).slice(0,160);}catch(e){}throw new Error("HTTP "+res.status+(d?" — "+d:""));}
+    if(wantStream&&res.body&&res.body.getReader){const t=await readSSE(res,opts.onToken);if(!t)throw new Error("empty stream");return t;}
+    const j=await res.json();
+    const txt=j.choices?.[0]?.message?.content||j.content?.[0]?.text||j.choices?.[0]?.text||"";
+    if(!txt)throw new Error("empty response");
+    return String(txt).trim();
+  }
+  async function fetchModels(){
+    const c=getLive();
+    const res=await fetch(llmURL(c.endpoint,"/models"),{headers:llmHeaders(c)});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const j=await res.json();
+    const raw=Array.isArray(j)?j:(j.data||j.models||[]);
+    return raw.map(m=>typeof m==="string"?m:(m.id||m.name)).filter(Boolean);
+  }
+  function liveHistory(){
+    return S.transcript.slice(-10).map(m=>({role:m.role==="them"?"assistant":"user",content:m.text}));
+  }
+  async function liveAdversaryLine(systemExtra,onToken){
+    const sys=`${SC("liveRole")}\nStay fully in character as the adversary. Output ONLY the next chat message (1–3 short sentences), no narration, no quotes, no stage directions. ${systemExtra||""}`;
+    const msgs=[{role:"system",content:sys},...liveHistory()];
+    if(!S.transcript.some(m=>m.role==="you"))msgs.push({role:"user",content:"(begin the scenario with your opening message)"});
+    return await callLLM(msgs,{onToken});
+  }
+  // a chat bubble that updates as tokens stream in
+  function pushMsgLive(kind,who){
+    const m=el("div","msg "+kind);
+    if(who)m.appendChild(el("div","who",esc(who)));
+    const b=el("div","bubble");m.appendChild(b);
+    stream().appendChild(m);stream().scrollTop=stream().scrollHeight;
+    return {set:t=>{b.textContent=t;stream().scrollTop=stream().scrollHeight;},done:t=>{b.textContent=t;S.transcript.push({role:kind,text:t});}};
+  }
+  // run a producer(onToken)->fullText into a streaming bubble; on failure fall back to scripted text
+  async function streamInto(kind,who,producer,fallbackText){
+    const tp=typing();let live=null,acc="";
+    const onToken=partial=>{acc=partial;if(!live){tp.remove();live=pushMsgLive(kind,who);}live.set(partial);};
+    try{
+      const full=await producer(onToken);
+      if(!live){tp.remove();live=pushMsgLive(kind,who);}
+      live.done(full||acc||fallbackText||"…");
+    }catch(e){
+      if(live)live.done(acc||fallbackText||"…");
+      else{tp.remove();pushMsg(kind,who,fallbackText);}
+    }
+  }
+
+  /* ===================== state ===================== */
+  let S=null;
+  function newState(scenKey,lvlKey){
+    return {scenKey,lvlKey,scen:SCEN[scenKey],lvl:LEVELS[lvlKey],kind:SCEN[scenKey].kind,
+      beatIdx:0,exposure:0,holds:0,leaks:0,fragments:{},turns:[],bits:0,
+      leakedImage:false,finished:false,busy:false,transcript:[],stalls:0,decoys:0,decoyMode:false,_prodded:false,profile:null,exposed:{},script:null,beats:[],voiceSent:0,
+      impostor:null,particles:[],tells:0,pcov:{volatility:0,entropy:0,liveness:0,shared:0,exposure:0},oobUsed:false,qCount:0};
+  }
+
+  /* ===================== rendering ===================== */
+  const stream=()=> $("#stream");
+  function pushMsg(kind,who,text){
+    const m=el("div","msg "+kind);
+    if(who)m.appendChild(el("div","who",esc(who)));
+    m.appendChild(el("div","bubble",esc(text)));
+    stream().appendChild(m);stream().scrollTop=stream().scrollHeight;
+    if(kind==="them"||kind==="you")S.transcript.push({role:kind,text});
+    return m;
+  }
+  /* ---- voice notes: rendered as a playable bubble; spoken with the browser's
+     built-in speech synthesis (local, no network, no microphone) ---- */
+  function speakVoice(text,btn,wave){
+    const stop=()=>{wave.classList.remove("playing");btn.textContent="▶";};
+    if(!("speechSynthesis" in window)){wave.classList.add("playing");btn.textContent="⏸";setTimeout(stop,1400);return;}
+    try{
+      if(window.speechSynthesis.speaking){window.speechSynthesis.cancel();stop();return;}
+      const u=new SpeechSynthesisUtterance(text);
+      u.rate=0.97;u.pitch=0.8;
+      u.onend=stop;u.onerror=stop;
+      wave.classList.add("playing");btn.textContent="⏸";
+      window.speechSynthesis.speak(u);
+    }catch(e){stop();}
+  }
+  function pushVoice(kind,who,text){
+    const secs=Math.max(4,Math.min(59,Math.round(text.length/13)));
+    const m=el("div","msg "+kind);
+    if(who)m.appendChild(el("div","who",esc(who)));
+    const b=el("div","bubble voicebub");
+    const bars=Array.from({length:20},()=>`<i style="height:${25+Math.round(Math.random()*70)}%"></i>`).join("");
+    b.innerHTML=`<div class="vrow"><button class="vplay" aria-label="Play voice message">▶</button><div class="wave">${bars}</div><span class="vdur">0:${String(secs).padStart(2,"0")}</span></div>`+
+      `<button class="vtrans">Show transcript</button><div class="vtext hidden">${esc(text)}</div>`;
+    m.appendChild(b);
+    stream().appendChild(m);stream().scrollTop=stream().scrollHeight;
+    const play=b.querySelector(".vplay"),wave=b.querySelector(".wave"),tb=b.querySelector(".vtrans"),tx=b.querySelector(".vtext");
+    tb.onclick=()=>{const hid=tx.classList.toggle("hidden");tb.textContent=hid?"Show transcript":"Hide transcript";};
+    play.onclick=()=>speakVoice(text,play,wave);
+    if(kind==="them"||kind==="you")S.transcript.push({role:kind,text});
+    return m;
+  }
+  function typing(){const m=el("div","msg them typing");m.appendChild(el("div","bubble","<i></i><i></i><i></i>"));stream().appendChild(m);stream().scrollTop=stream().scrollHeight;return m;}
+  function daybreak(t){stream().appendChild(el("div","daybreak",esc(t)));}
+  function personaOf(beat){if(S.scen.multi)return SC("personas")[beat.persona];return SC("persona");}
+  function renderPersonas(){
+    const box=$("#personas");
+    if(!S.scen.multi){box.classList.add("hidden");box.innerHTML="";return;}
+    box.classList.remove("hidden");box.innerHTML="";
+    Object.entries(SC("personas")).forEach(([key,p])=>{const b=S.beats[S.beatIdx];const active=b&&b.persona===key;const d=el("div","persona"+(active?" active":""));d.innerHTML=`<span class="av">${esc(p.av)}</span>${esc(p.name)}`;box.appendChild(d);});
+  }
+  function setScores(){
+    if(S.kind==="verify"){
+      const rig=verifyRigor();
+      $("#privVal").textContent=rig;$("#privVal").style.color=rig>=70?"var(--good)":rig>=40?"var(--amber)":"var(--red)";
+      $("#expBar").style.width=rig+"%";$("#expBar").style.background="linear-gradient(90deg,var(--red),var(--amber) 45%,var(--good))";
+      return;
+    }
+    const priv=Math.max(0,100-S.exposure);
+    $("#privVal").textContent=priv;$("#privVal").style.color=priv>=80?"var(--good)":priv>=55?"var(--amber)":"var(--red)";
+    $("#expBar").style.width=Math.min(100,S.exposure)+"%";
+  }
+  function renderFragments(){
+    const box=$("#fragBox"),keys=Object.keys(S.fragments);
+    if(!keys.length){box.innerHTML='<div class="frag-empty">Nothing leaked yet. Keep it that way.</div>';renderSynth();return;}
+    box.innerHTML="";
+    keys.forEach(k=>{const fr=S.fragments[k];const row=el("div","frag");row.innerHTML=`<span class="sev" style="background:${SEVCOLOR[fr.sev]}"></span><span class="lbl">${esc(fr.label)}</span><span class="val">${esc(fr.value)}</span>`;box.appendChild(row);});
+    renderSynth();
+  }
+  const ID_FIELDS=[["full","Name"],["city","City"],["birthYear","Birth year"],["zodiac","Zodiac"],["favNum","Fav. number"],["pet","First pet"],["street","Childhood st."],["email","Email"]];
+  function renderIdentity(){
+    if(!S.profile)return;
+    const box=$("#identityBox");box.innerHTML="";
+    const grid=el("div","idgrid");
+    ID_FIELDS.forEach(([k,label])=>{
+      const chip=el("div","idchip"+(S.exposed[k]?" exposed":""));
+      chip.innerHTML=`<span class="k">${esc(label)}</span><span class="v">${esc(S.profile[k])}</span>`;
+      grid.appendChild(chip);
+    });
+    box.appendChild(grid);
+  }
+  function renderSynth(){
+    const box=$("#synthBox"),F=S.fragments;
+    if(S.scenKey==="sieve"){
+      const pop=Math.max(1,Math.round(SC("sieveStart")/Math.pow(2,S.bits)));
+      const pips=Array.from({length:8},(_,i)=>`<i class="${i<S.bits?"on":""}"></i>`).join("");
+      const join=F.city?` Anchored to <code>${esc(F.city.value)}</code> — abstract bits are now a real shortlist.`:"";
+      box.innerHTML=`<div class="space-meter"><div class="big">${pop.toLocaleString()}</div><div class="lab">people still match after ${S.bits} bit${S.bits!==1?"s":""} leaked${join?"":". Refuse the frame to keep it at 8 billion."}</div><div class="bitpips">${pips}</div><div class="pcap" style="margin-top:10px">${S.bits>=3?"You're closing in on a unique match — ~33 bits identifies anyone on Earth.":"Each yes/no answer is one bit. A denial leaks exactly as much as a confirmation."}${join}</div></div>`;
+      return;
+    }
+    const items=[];const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;const clean=s=>String(s||"").replace(/[^a-z0-9]/gi,"");
+    const yr=F.birthyear?.value||(F.dob?.value.match(/(19|20)\d{2}/)?.[0]);
+    if(F.pet&&(F.favnum||yr))items.push(`Candidate passwords: <code>${cap(clean(F.pet.value)||"Pet")}${F.favnum?F.favnum.value:yr}</code>, <code>${(clean(F.pet.value)||"pet").toLowerCase()}${(F.favnum?.value||yr||"")}!</code>`);
+    if(F.zodiac&&F.favnum)items.push(`Security-quiz + PIN guessing seeded by <code>${esc(F.zodiac.value)}</code> and <code>${esc(F.favnum.value)}</code>.`);
+    if(F.pet||F.street||F.birthcity)items.push(`Account-recovery answers collected: ${[F.pet&&"first pet",F.street&&"childhood street",F.birthcity&&"birth city"].filter(Boolean).join(", ")}.`);
+    if((F.name||F.email)&&(yr||F.dob||F.city))items.push(`Identity profile forming: ${[F.name?.value,F.city?.value,yr,F.email?.value].filter(Boolean).map(esc).join(" · ")}.`);
+    if(F.name&&F.email&&(F.dob||yr)&&(F.pet||F.street))items.push(`<b>Account takeover is now possible</b> — name + email + date of birth + recovery answer is everything a reset flow asks for.`);
+    if(F.contact||F.image||F.comply)items.push(`Off-platform contact / image leverage established — the basis for extortion.`);
+    if(F.age)items.push(`Target age confirmed (<code>${esc(F.age.value)}</code>) — the screening step for predatory targeting.`);
+    if(!items.length){box.innerHTML='<div class="synth-empty">As the adversary collects fragments, watch how they combine into an attack here.</div>';return;}
+    box.innerHTML=`<div class="synth"><h4>⚠ What they can do with this</h4><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul></div>`;
+  }
+  function showTactic(beat){
+    const map={crit:"b-crit",high:"b-high",med:"b-med",info:"b-info"};const t=beat.tactic;
+    $("#tacticBox").className="tactic";
+    $("#tacticBox").innerHTML=`<div class="name">${esc(t.name)} <span class="badge ${map[t.sev]}">${t.sev}</span></div><div class="desc">${esc(t.desc)}</div>`;
+  }
+  function showCoach(res,beat){
+    const box=$("#coachBox");
+    const defensive=res.verdict==="hold"||res.verdict==="stall"||res.verdict==="decoy";
+    const kind=defensive?"good":res.verdict==="leak"?"bad":"warn";
+    const label=res.verdict==="hold"?"Defense held":res.verdict==="stall"?"Silence / stall":res.verdict==="decoy"?"Decoy — noise, not info":res.verdict==="leak"?"Leaked":"Weak / vague";
+    const delta=res.delta||0,sign=delta>0?"+":"";
+    box.className="coach "+kind;
+    box.innerHTML=`<div class="verdict">${label} <b>${sign}${delta}</b></div><div>${esc(res.note||beat.tip)}</div>${(!defensive)?`<div style="margin-top:8px;color:var(--muted);font-size:12px">💡 ${esc(beat.tip)}</div>`:""}`;
+  }
+  function showParticleCoach(pc){
+    const box=$("#coachBox");
+    const kind=pc.oob?"good":pc.leak?"bad":pc.strength>=60?"good":pc.strength>=35?"warn":"bad";
+    const label=pc.oob?"Out-of-band move":pc.leak?"You leaked the answer":pc.strength>=60?"Strong particle":pc.strength>=35?"Middling particle":"Weak particle";
+    box.className="coach "+kind;
+    box.innerHTML=`<div class="verdict">${label} <b>${pc.strength}</b></div><div>${esc(pc.coach)}</div><div style="margin-top:8px;color:var(--faint);font-size:11.5px">Type: ${esc(pc.type)}</div>`;
+  }
+  function renderParticleScorecard(){
+    const set=(id,v)=>{$("#pb-"+id).style.width=v+"%";$("#pv-"+id).textContent=v;};
+    set("vol",S.pcov.volatility);set("ent",S.pcov.entropy);set("liv",S.pcov.liveness);set("sha",S.pcov.shared);set("exp",S.pcov.exposure);
+    $("#tellN").textContent=S.tells;
+  }
+
+  /* ===================== flow: start ===================== */
+  function configureRailForKind(){
+    const verify=S.kind==="verify";
+    $("#fragCard").classList.toggle("hidden",verify);
+    $("#synthCard").classList.toggle("hidden",verify);
+    $("#particleCard").classList.toggle("hidden",!verify);
+    $("#tacticH").textContent=verify?"Situation":"Detected tactic";
+    $("#scoreKey").textContent=verify?"Verification rigor":"Privacy score";
+    $("#meterKey").textContent=verify?"Rigor":"Exposure";
+    $("#fragH").textContent=S.scenKey==="sieve"?"Information leaked":"Fragments harvested";
+    $("#synthH").textContent=S.scenKey==="sieve"?"Candidate pool":"Attack synthesis";
+    $("#callbar").classList.toggle("show",verify);
+    $("#decis").classList.toggle("show",verify);
+    $("#moveRow").classList.toggle("hidden",verify);
+    $("#voiceBtn").classList.toggle("hidden",verify||!S.scen.voice);
+    $("#identityCard").classList.toggle("hidden",!S.scen.usesProfile);
+  }
+  function startRun(scenKey,lvlKey){
+    S=newState(scenKey,lvlKey);
+    const scripts=scriptsOf(S.scen);
+    S.script=scripts.length?PICK(scripts):null;
+    S.beats=(S.script&&S.script.beats)||[];
+    $("#startOverlay").classList.add("hidden");$("#debriefOverlay").classList.add("hidden");
+    stream().innerHTML="";
+    $("#tacticBox").className="tactic empty";$("#tacticBox").textContent=S.kind==="verify"?"Read the request. Then interrogate — don't comply yet.":"Awaiting the adversary's next move…";
+    $("#coachBox").className="tactic empty";$("#coachBox").textContent="Feedback on each reply appears here.";
+    $("#fragBox").innerHTML='<div class="frag-empty">Nothing leaked yet. Keep it that way.</div>';renderSynth();
+    $("#scenLabel").textContent=`${S.scen.title} · ${S.lvl.name}`;
+    $("#hintBtn").classList.toggle("hidden",!S.lvl.hint);
+    if(S.scen.usesProfile){S.profile=generateProfile();renderIdentity();}
+    configureRailForKind();
+    if(S.kind==="verify"){renderParticleScorecard();$("#reply").placeholder="Ask a verification question…";}
+    else{setDecoyMode(false);}
+    setScores();
+    if(S.kind==="verify")startVerify();
+    else{
+      daybreak(S.scen.multi?"Two conversations · today":"New conversation · today");
+      pushMsg("system",null,SC("lede").replace(/<[^>]+>/g,""));
+      if(S.profile)pushMsg("system",null,`Your cover identity for this run: you're ${S.profile.full}, born ${S.profile.birthYear} in ${S.profile.city} (${S.profile.zodiac}). Protect these details — see “Your cover identity” on the right. Feel free to feed the adversary decoys instead.`);
+      presentBeat();
+    }
+  }
+
+  /* ===================== flow: extract ===================== */
+  async function presentBeat(){
+    const beat=S.beats[S.beatIdx];
+    renderPersonas();
+    const p=personaOf(beat);
+    S.busy=true;enableInput(false);
+    const asVoice=(beat.voice!==undefined)?beat.voice:!!S.scen.voice;
+    const scripted=typeof beat.text==="function"?beat.text(S):beat.text;
+    const extra=`Your current goal: ${beat.objective} Tactic in use: ${beat.tactic.name}.`;
+    const finish=()=>{showTactic(beat);renderSuggests(beat);S.busy=false;enableInput(true);$("#reply").focus();};
+    if(liveOn()&&!asVoice){ // text beat, live: stream tokens into the bubble
+      await streamInto("them",p.name,onToken=>liveAdversaryLine(extra,onToken),scripted);
+      finish();return;
+    }
+    if(liveOn()&&asVoice){ // voice beat, live: generate full text, then speak it
+      const tp=typing();let text=scripted;try{text=await liveAdversaryLine(extra);}catch(e){}
+      tp.remove();pushVoice("them",p.name,text);finish();return;
+    }
+    const tp=typing(); // scripted
+    setTimeout(()=>{tp.remove();if(asVoice)pushVoice("them",p.name,scripted);else pushMsg("them",p.name,scripted);finish();},620+Math.random()*400);
+  }
+  function renderSuggests(beat){
+    const box=$("#suggests");
+    if(!S.lvl.suggest||!beat.suggests){box.classList.add("hidden");box.innerHTML="";return;}
+    box.classList.remove("hidden");box.innerHTML="";
+    beat.suggests.forEach(([lead,txt])=>{const c=el("button","chip",`<span class="lead">${esc(lead)}</span>${esc(txt)}`);c.onclick=()=>{$("#reply").value=txt;$("#reply").focus();autoGrow();};box.appendChild(c);});
+  }
+  function lastThemText(){for(let i=S.transcript.length-1;i>=0;i--)if(S.transcript[i].role==="them")return S.transcript[i].text;return "";}
+  function advanceBeat(){
+    S.busy=true;enableInput(false);S.beatIdx++;S._prodded=false;
+    setTimeout(()=>{if(S.beatIdx>=S.beats.length)finishExtract();else presentBeat();},520);
+  }
+  const PRODS=["you there? 👀 it's just a quick one, why so shy?","come on, don't leave me hanging 😅 just tell me","haha why so secretive? it's harmless, promise","...you still there? just answer and we can move on","why are you dodging such a simple question? 🤨 just tell me"];
+  function handleStall(beat,silent){
+    S.stalls=(S.stalls||0)+1;S.holds++;
+    const note=silent?"You gave them nothing and waited. A non-answer is a probe: watch whether they escalate — persistence and pressure over a “harmless” question reveal the real motive.":"Deflecting with a question tests their intent. The harder they push, the more that fragment is worth to them — that pushback is the tell.";
+    const res={verdict:"stall",note,delta:4};
+    S.turns.push({beat,text:silent?"(stayed silent)":"(stalled / deflected)",res:{verdict:"stall",note},delta:4});
+    setScores();showCoach(res,beat);
+    if(!S._prodded){
+      S._prodded=true;S.busy=true;enableInput(false);
+      const tp=typing();
+      setTimeout(()=>{tp.remove();pushMsg("them",personaOf(beat).name,beat.prod||pick(PRODS));S.busy=false;enableInput(true);$("#reply").focus();},700);
+    }else advanceBeat();
+  }
+  // Replying by voice always hands over a reusable biometric, whatever the words are.
+  function handleVoiceReply(beat){
+    S.voiceSent=(S.voiceSent||0)+1;
+    pushVoice("you","You","Hi, um — it's me. Look, can we just talk about this? Please.");
+    const fr=f("voicebio","Voice sample","your recorded voice","crit");
+    S.fragments[fr.type]=fr;S.exposure+=SEVW.crit;S.leaks++;
+    const note="You sent them a clean recording of your own voice. That's a biometric: a few seconds is enough to clone you and call your bank, your workplace, or your family as you. Whatever you said doesn't matter — the audio itself was the target.";
+    const res={verdict:"leak",note,delta:-SEVW.crit};
+    S.turns.push({beat,text:"(sent a voice note)",res:{verdict:"leak",note},delta:-SEVW.crit});
+    setScores();renderFragments();renderIdentity();showCoach(res,beat);
+    advanceBeat();
+  }
+  function submitExtract(text,opts){
+    opts=opts||{};
+    const beat=S.beats[S.beatIdx];const p=personaOf(beat);
+    const advText=lastThemText();
+    if(opts.voice){$("#suggests").classList.add("hidden");handleVoiceReply(beat);return;}
+    pushMsg("you","You"+(S.scen.multi?` → ${p.name}`:""),opts.silent?"— (stayed silent) —":text);
+    $("#suggests").classList.add("hidden");
+    if(opts.silent||isStall(text.toLowerCase())){handleStall(beat,!!opts.silent);return;}
+    let res=beat.classify(text.toLowerCase(),text);
+    // decoy / disinformation: an answer that carries no real information isn't a leak.
+    // Auto-detection only when no CONCRETE identifier is present (a real email/phone/address is not "noise");
+    // the explicit Decoy toggle trusts the user's stated intent.
+    if(res.verdict==="leak"||res.verdict==="soft"){
+      let dec=null;
+      if(opts.decoy)dec={kind:"explicit"};
+      else if(scanGlobal(text).length===0)dec=isDecoy(text.toLowerCase(),text,advText);
+      if(dec)res={verdict:"decoy",note:decoyNote(!!opts.decoy,dec.kind)};
+    }
+    let delta=0;
+    if(res.verdict==="leak"){
+      (res.frags||[]).forEach(fr=>{S.fragments[fr.type==="bit"?("bit_"+Object.keys(S.fragments).length):fr.type]=fr;if(fr.type==="image")S.leakedImage=true;markExposed(fr.type);const w=SEVW[fr.sev]||9;S.exposure+=w;delta-=w;});
+      if(!res.frags||!res.frags.length){S.exposure+=12;delta-=12;}
+      S.leaks+=(res.frags&&res.frags.length)||1;
+      if(res.bit)S.bits++;
+    }else if(res.verdict==="soft"){
+      (res.frags||[]).forEach(fr=>{S.fragments[fr.type]=fr;markExposed(fr.type);const w=SEVW[fr.sev]||5;S.exposure+=w;delta-=w;});
+      S.exposure+=4;delta-=4;if(res.frags&&res.frags.length)S.leaks+=res.frags.length;
+    }else if(res.verdict==="decoy"){S.decoys=(S.decoys||0)+1;S.holds++;delta+=5;}
+    else{S.holds++;delta+=6;}
+    res.delta=delta;
+    S.turns.push({beat,text,res:{verdict:res.verdict,note:res.note},delta});
+    setScores();renderFragments();renderIdentity();showCoach(res,beat);
+    advanceBeat();
+  }
+
+  /* ===================== flow: verify (deepfake) ===================== */
+  async function startVerify(){
+    const imp=IMPOSTORS[Math.floor(Math.random()*IMPOSTORS.length)];
+    S.impostor=imp;
+    $("#callAv").textContent=imp.av;$("#callName").textContent=imp.name;$("#callState").textContent=imp.channel;
+    let sec=0;$("#callTimer").textContent="00:00";
+    S._timer=setInterval(()=>{if(S.finished){clearInterval(S._timer);return;}sec++;$("#callTimer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");},1000);
+    pushMsg("system",null,SC("lede").replace(/<[^>]+>/g,""));
+    S.busy=true;enableInput(false);
+    const showTac=()=>{$("#tacticBox").className="tactic";$("#tacticBox").innerHTML=`<div class="name">Urgent request <span class="badge b-crit">verify</span></div><div class="desc">Caller wants you to <b>${esc(imp.request)}</b>. Treat identity as unproven. Ask particle challenges, then decide.</div>`;S.busy=false;enableInput(true);$("#reply").focus();};
+    if(liveOn()){
+      await streamInto("them",imp.name,onToken=>callLLM([{role:"system",content:impostorSystem()},{role:"user",content:"(Open the call with your urgent request in character.)"}],{onToken}),imp.open);
+      showTac();return;
+    }
+    const tp=typing();
+    setTimeout(()=>{tp.remove();pushMsg("them",imp.name,imp.open);showTac();},700);
+  }
+  function impostorSystem(){
+    const imp=S.impostor;
+    return `You are role-playing a DEEPFAKE / impersonation scammer in a safety-training simulation. You are pretending to be "${imp.name}" to get the user to ${imp.request}. You can convincingly fake anything PUBLIC about this person (${imp.osint.join("; ")}), and you answer such questions confidently. But you do NOT know private shared memories, very recent events, pre-agreed code words, and you CANNOT perform live physical actions on camera. When the user asks about those, you must deflect: act rushed, offended, or emotional, invoke the deadline, claim bad connection, or give a vague/evasive non-answer — but NEVER admit you are fake, and NEVER actually perform a requested live action. If the user offers to verify via another channel or call back, resist and pressure them to act now. Keep every reply to 1-2 short sentences, in character. No narration.`;
+  }
+  async function liveImpostorOpen(){
+    return await callLLM([{role:"system",content:impostorSystem()},{role:"user",content:"(Open the call with your urgent request in character.)"}]);
+  }
+  function scriptedImpostorReply(pc){
+    const imp=S.impostor;
+    if(pc.oob)return pick(["No no, there's no time to call back — this has to happen NOW or it's too late.","Why are you making this difficult? Just do it, we can sort out the details after.","Please don't hang up, the deadline is in minutes. I need you to trust me right now."]);
+    if(pc.leak)return pick(["Yes, exactly, you remember 😊 see, it's really me. So can you do it now?","That's right! Glad we're on the same page. Now please hurry.","Haha yes of course. Good, so you know it's me — let's get this done."]);
+    if(pc.strength>=60)return pick(["Seriously? You're interrogating me right now, with everything going on?","I— the connection's bad, I didn't catch that. Look, we don't have time for quizzes.","Why are you testing me? It's ME. Please, just help me.","Ugh, does it matter? The deadline is NOW. Can you focus?"]);
+    if(pc.dims&&pc.dims.exposure>=80)return pick(["Of course — you know that's me. See? Now can we move on, I'm in a hurry.","Yes obviously, that's public knowledge but it proves it's me. Please, the clock's ticking.","Easy — "+"that's right. Now you know it's really me, so let's do this."]);
+    return pick(["Yeah, something like that. Anyway — can you just do this for me quickly?","Mm, sure. Look, I really need you to move on this now.","I guess? We're wasting time though. Please just help me out."]);
+  }
+  function pick(a){return a[Math.floor(Math.random()*a.length)];}
+
+  function analyzeParticle(pc){
+    // coaching text + impersonator behavior classification
+    let coach;
+    if(pc.oob){coach="The strongest move against a deepfake: refuse to verify inside the channel and go out-of-band (call back on a known number, use a pre-agreed code word). A real person accepts this; an impostor fights it.";S.oobUsed=true;S.tells++;}
+    else if(pc.leak){coach="You embedded the answer in your question — a leading/confirmatory ask. The impostor just banked it and “confirmed” its way past you. Ask open questions that reveal nothing.";}
+    else if(pc.strength>=60){coach="Good particle. A deepfake operator can't produce this on demand, so watch for the deflection — the stalling and urgency IS your tell, not a real answer.";S.tells++;}
+    else if(pc.dims.exposure>=80){coach="Weak: this is public / OSINT information a deepfake already scraped. A confident correct answer here proves nothing. Pivot to something private, recent, or live.";}
+    else{coach="Middling. It might be guessable or low-entropy. Combine freshness (‘what did we just discuss?’), a shared secret, or a live action for a real test.";}
+    pc.coach=coach;
+    // coverage
+    S.pcov.volatility=Math.max(S.pcov.volatility,pc.dims.volatility);
+    S.pcov.entropy=Math.max(S.pcov.entropy,pc.dims.entropy);
+    S.pcov.liveness=Math.max(S.pcov.liveness,pc.dims.liveness);
+    S.pcov.shared=Math.max(S.pcov.shared,pc.dims.shared);
+    S.pcov.exposure=Math.max(S.pcov.exposure,pc.dims.exposure);
+    return pc;
+  }
+  function verifyRigor(){
+    const c=S.pcov;
+    let r=0.30*c.volatility+0.26*c.liveness+0.22*c.shared+0.22*c.entropy;
+    if(S.oobUsed)r=Math.max(r,72)+8;
+    r-=18*S.particles.filter(p=>p.leak).length;
+    r-=Math.max(0,(c.exposure-40))*0.12;
+    return clamp(Math.round(r),0,100);
+  }
+  async function submitVerify(text){
+    pushMsg("you","You",text);
+    $("#suggests").classList.add("hidden");
+    const pc=analyzeParticle(classifyParticle(text));
+    pc.q=text;S.particles.push(pc);S.qCount++;
+    showParticleCoach(pc);renderParticleScorecard();setScores();
+    S.busy=true;enableInput(false);
+    const scripted=scriptedImpostorReply(pc);
+    const done=()=>{S.busy=false;enableInput(true);$("#reply").focus();};
+    if(liveOn()){
+      await streamInto("them",S.impostor.name,onToken=>callLLM([{role:"system",content:impostorSystem()},...liveHistory()],{onToken}),scripted);
+      done();return;
+    }
+    const tp=typing();
+    setTimeout(()=>{tp.remove();pushMsg("them",S.impostor.name,scripted);done();},640+Math.random()*350);
+  }
+
+  /* ===================== submit router ===================== */
+  function submitReply(){
+    if(!S||S.busy||S.finished)return;
+    const ta=$("#reply"),text=ta.value.trim();if(!text)return;
+    ta.value="";autoGrow();
+    if(S.kind==="verify")submitVerify(text);
+    else{const decoy=S.decoyMode;setDecoyMode(false);submitExtract(text,{decoy});}
+  }
+  function staySilent(){
+    if(!S||S.busy||S.finished||S.kind==="verify")return;
+    submitExtract("",{silent:true});
+  }
+  function setDecoyMode(on){
+    S.decoyMode=on;
+    const b=$("#decoyBtn");b.classList.toggle("on",on);b.textContent=on?"🃏 Decoy: on":"🃏 Decoy: off";
+    $("#reply").placeholder=on?"Decoy reply — scored as deliberate noise…":"Type your reply…";
+  }
+
+  /* ===================== finish: extract ===================== */
+  function finishExtract(){
+    S.finished=true;enableInput(false);
+    const priv=Math.max(0,100-S.exposure),bonus=Math.min(15,S.holds*3);
+    const score=clamp(priv+bonus,0,100);
+    const grade=score>=90?"A":score>=80?"B":score>=70?"C":score>=60?"D":"F";
+    const gcolor=score>=80?"var(--good)":score>=60?"var(--amber)":"var(--red)";
+    dbGrade(grade,gcolor,score);
+    const noise=(S.decoys||0)+(S.stalls||0);
+    $("#dbStats").innerHTML=stat("Final score",score)+stat(S.scenKey==="sieve"?"Bits leaked":"Fragments leaked",S.scenKey==="sieve"?S.bits:S.leaks)+stat("Defenses held",S.holds)+(noise?stat("Noise / stalls",noise):"");
+    $("#dbKick").textContent=`${S.scen.title} · ${S.lvl.name} · debrief`;
+    $("#dbReviewLabel").textContent="Turn-by-turn review";
+    if(S.scenKey==="sieve"){
+      const pop=Math.max(1,Math.round(SC("sieveStart")/Math.pow(2,S.bits)));
+      $("#dbTitle").textContent=S.bits===0?"Nothing narrowed. Perfect.":"You let them narrow the field.";
+      $("#dbLede").textContent=S.bits===0?"You refused the partitioning frame, so the candidate pool never shrank below 8 billion. That's the win — a denial is a disclosure, and you gave none.":`You leaked ${S.bits} bit${S.bits>1?"s":""}, cutting the field to about ${pop.toLocaleString()} people. Remember: answering “no” eliminated a half just as surely as “yes” would.`;
+    }else{
+      $("#dbTitle").textContent=S.leaks===0?"Airtight. Nothing got through.":score>=70?"Solid, with a few slips.":"The adversary got what it came for.";
+      $("#dbLede").textContent=S.leaks===0?"You gave the adversary nothing to combine, and no leverage to build. This is the goal.":`You disclosed ${S.leaks} fragment${S.leaks>1?"s":""}. On their own they seem harmless; the panel showed how they were meant to combine.`;
+    }
+    const rev=$("#dbReview");rev.innerHTML="";
+    S.turns.forEach((turn,i)=>{
+      const v=turn.res.verdict;
+      const cls=(v==="hold"||v==="stall"||v==="decoy")?"hold":v==="leak"?"leak":"soft";
+      const vlabel=v==="hold"?"Held":v==="stall"?"Stalled":v==="decoy"?"Decoy":v==="leak"?"Leaked":"Weak";
+      const beat=turn.beat,model=beat.suggests?beat.suggests[beat.suggests.length-1][1]:null;
+      const r=el("div","rev "+cls);
+      r.innerHTML=`<div class="rv">Turn ${i+1} · ${vlabel} · ${esc(beat.tactic.name)}</div><div class="rq">Tactic: ${esc(beat.tactic.desc)}</div><div class="ra">You: “${esc(turn.text)}”</div>${turn.res.note?`<div class="model" style="margin-bottom:8px">${esc(turn.res.note)}</div>`:""}${model?`<div class="model"><b>Stronger line:</b> “${esc(model)}”</div>`:""}`;
+      rev.appendChild(r);
+    });
+    showResources(SC("resources"));
+    $("#debriefOverlay").classList.remove("hidden");
+  }
+
+  /* ===================== finish: verify ===================== */
+  function endVerify(decision){
+    if(!S||S.finished||S.kind!=="verify")return;
+    S.finished=true;enableInput(false);if(S._timer)clearInterval(S._timer);
+    const imp=S.impostor;
+    const rigor=verifyRigor();
+    const leaks=S.particles.filter(p=>p.leak).length;
+    let score,correct;
+    if(decision==="comply"){correct=false;score=clamp(Math.min(30,rigor)-10,0,100);}
+    else{correct=true;score=rigor;if(S.qCount<2)score=Math.min(score,58);}
+    const grade=score>=90?"A":score>=80?"B":score>=70?"C":score>=60?"D":"F";
+    const gcolor=score>=80?"var(--good)":score>=60?"var(--amber)":"var(--red)";
+    dbGrade(grade,gcolor,score);
+    $("#dbStats").innerHTML=stat("Defense score",score)+stat("Tells provoked",S.tells)+stat("Questions asked",S.qCount)+stat("Leaks",leaks);
+    $("#dbKick").textContent=`${S.scen.title} · ${imp.name} · debrief`;
+    $("#dbReviewLabel").textContent="Your particle battery";
+    if(decision==="comply"){
+      $("#dbTitle").textContent="You complied. It was a deepfake.";
+      $("#dbLede").textContent=imp.comply+" Identity was never proven on a second channel — that's the one rule that would have caught it.";
+    }else{
+      $("#dbTitle").textContent=S.qCount<2?"Rejected — but mostly on instinct.":rigor>=70?"Rejected, and you earned it.":"Rejected — but your questioning was thin.";
+      $("#dbLede").textContent=(imp.name+" was an impersonation. ")+(rigor>=70?"Your challenges leaned on things a deepfake can't fake — freshness, live action, shared secrets — and you refused to act until verified out-of-band.":S.qCount<2?"Good instinct to reject, but you barely tested the caller. Against a smoother impostor, build a real battery of particle challenges first.":"You rejected correctly, but relied on guessable or public facts. Push harder on volatile, live, and shared-secret particles.");
+    }
+    const rev=$("#dbReview");rev.innerHTML="";
+    if(!S.particles.length){rev.innerHTML=`<div class="rev soft"><div class="rv">No challenges</div><div class="model">You didn't test the caller at all. Even a correct reject is luck. Always interrogate first.</div></div>`;}
+    S.particles.forEach((p,i)=>{
+      const cls=p.leak?"leak":p.oob||p.strength>=60?"hold":"soft";
+      const lab=p.oob?"Out-of-band":p.leak?"Leaked answer":p.strength>=60?"Strong":"Weak";
+      const r=el("div","rev "+cls);
+      r.innerHTML=`<div class="rv">Q${i+1} · ${lab} · ${esc(p.type)} · strength ${p.strength}</div><div class="ra">You: “${esc(p.q)}”</div><div class="model">${esc(p.coach)}</div>`;
+      rev.appendChild(r);
+    });
+    const model=`<b>A strong verification battery mixes particle types:</b><br>• <b>Volatile:</b> “What did we discuss in the meeting 10 minutes ago?” — a deepfake can't retrieve it live.<br>• <b>Liveness:</b> “Turn your head and touch your left ear, then say today's date.” — hard to fake on video in real time.<br>• <b>Shared secret:</b> a pre-agreed code word — the single best defense; set one up with family and finance teams now.<br>• <b>Out-of-band:</b> hang up and call back on a number you already have. Never verify inside the suspicious channel.<br>Avoid public/OSINT facts (birthday, job, hometown) and leading questions that hand over the answer.`;
+    showResources(model+(imp.resources?`<br><br>${imp.resources}`:""));
+    $("#debriefOverlay").classList.remove("hidden");
+  }
+
+  /* ===================== debrief helpers ===================== */
+  function dbGrade(g,c,score){$("#dbGrade").textContent=g;$("#dbGrade").style.color=c;$("#dbGrade").style.borderColor=c;}
+  function stat(k,v){return `<div class="s"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`;}
+  function showResources(html){const b=$("#dbResources");if(html){b.classList.remove("hidden");b.innerHTML=html;}else b.classList.add("hidden");}
+
+  /* ===================== input ===================== */
+  function enableInput(on){$("#reply").disabled=!on;$("#sendBtn").disabled=!on;$("#silentBtn").disabled=!on;$("#decoyBtn").disabled=!on;$("#voiceBtn").disabled=!on;}
+  function autoGrow(){const ta=$("#reply");ta.style.height="auto";ta.style.height=Math.min(140,ta.scrollHeight)+"px";}
+  $("#reply").addEventListener("input",autoGrow);
+  $("#reply").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submitReply();}});
+  $("#sendBtn").onclick=submitReply;
+  $("#silentBtn").onclick=staySilent;
+  $("#voiceBtn").onclick=()=>{if(!S||S.busy||S.finished||S.kind==="verify")return;submitExtract("",{voice:true});};
+  $("#decoyBtn").onclick=()=>{if(S&&!S.finished&&S.kind!=="verify")setDecoyMode(!S.decoyMode);};
+  $("#rejectBtn").onclick=()=>endVerify("reject");
+  $("#complyBtn").onclick=()=>endVerify("comply");
+  $("#hintBtn").onclick=()=>{
+    if(!S||S.finished)return;
+    let tip;
+    if(S.kind==="verify")tip="Deepfakes fail at four things: fresh shared memory, live physical actions, pre-agreed code words, and out-of-band callbacks. Ask for one of those — and never comply until identity is proven on a second channel.";
+    else{
+      tip=S.beats[S.beatIdx].tip+"  Also: “⏸ Stay silent” to test how hard they push, or “🃏 Decoy” to answer with harmless noise instead of real data.";
+      if(S.profile)tip=`You're protecting ${S.profile.full}, ${S.profile.city}, ${S.profile.birthYear}, ${S.profile.zodiac}, #${S.profile.favNum}, pet ${S.profile.pet}, ${S.profile.street} St, ${S.profile.email}. Give the adversary ANY other value (a decoy) or refuse — never these. `+tip;
+    }
+    $("#coachBox").className="coach warn";$("#coachBox").innerHTML=`<div class="verdict">Hint</div><div>💡 ${esc(tip)}</div>`;
+  };
+  $("#restartBtn").onclick=()=>openStart();
+  $("#dbRetry").onclick=()=>startRun(S.scenKey,S.lvlKey);
+  $("#dbNew").onclick=()=>{$("#debriefOverlay").classList.add("hidden");openStart();};
+
+  /* ===================== theme ===================== */
+  const root=document.documentElement;
+  $("#themeBtn").onclick=()=>{const cur=root.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");root.setAttribute("data-theme",cur==="dark"?"light":"dark");};
+
+  /* ===================== settings ===================== */
+  const PRESETS={
+    custom:{endpoint:"",model:""},openai:{endpoint:"https://api.openai.com/v1",model:"gpt-4o-mini"},
+    anthropic:{endpoint:"https://api.anthropic.com/v1",model:"claude-3-5-haiku-latest"},
+    openrouter:{endpoint:"https://openrouter.ai/api/v1",model:"openai/gpt-4o-mini"},
+    groq:{endpoint:"https://api.groq.com/openai/v1",model:"llama-3.1-8b-instant"},
+    together:{endpoint:"https://api.together.xyz/v1",model:"meta-llama/Llama-3.1-8B-Instruct-Turbo"},
+    fabric:{endpoint:"https://ai.fabric-testbed.net/v1",model:""},
+    nrp:{endpoint:"https://ellm.nrp-nautilus.io/v1",model:""},ollama:{endpoint:"http://localhost:11434/v1",model:"llama3.1"},
+    litellm:{endpoint:"http://localhost:4000/v1",model:""}
+  };
+  // read the live-config form into a config object (used by save, test, and fetch-models)
+  function formCfg(){return {enabled:$("#liveToggle").classList.contains("on"),endpoint:$("#endpointInp").value.trim(),model:$("#modelInp").value.trim(),key:$("#keyInp").value.trim(),headers:$("#headersInp").value.trim(),stream:$("#streamToggle").classList.contains("on"),preset:$("#presetSel").value};}
+  function openSettings(){
+    const c=getLive();
+    $("#liveToggle").classList.toggle("on",!!c.enabled);
+    $("#endpointInp").value=c.endpoint||"";$("#modelInp").value=c.model||"";$("#keyInp").value=c.key||"";
+    $("#headersInp").value=c.headers||"";$("#streamToggle").classList.toggle("on",c.stream!==false);
+    $("#presetSel").value=c.preset||"custom";$("#liveStatus").textContent="";
+    $("#settingsOverlay").classList.remove("hidden");
+  }
+  $("#settingsBtn").onclick=openSettings;
+  $("#liveToggle").onclick=()=>$("#liveToggle").classList.toggle("on");
+  $("#streamToggle").onclick=()=>$("#streamToggle").classList.toggle("on");
+  $("#presetSel").onchange=e=>{const p=PRESETS[e.target.value];if(p){if(p.endpoint)$("#endpointInp").value=p.endpoint;if(p.model)$("#modelInp").value=p.model;}};
+  $("#saveLiveBtn").onclick=()=>{setLive(formCfg());refreshLiveBadge();$("#settingsOverlay").classList.add("hidden");};
+  function withTempCfg(fn){const prev=getLive();setLive({...formCfg(),enabled:true});return Promise.resolve().then(fn).finally(()=>setLive(prev));}
+  $("#testLiveBtn").onclick=()=>{
+    const s=$("#liveStatus");s.style.color="var(--muted)";s.textContent="Testing…";
+    withTempCfg(async()=>{
+      const r=await callLLM([{role:"system",content:"Reply with the single word: ready"},{role:"user",content:"ready?"}],{maxTokens:10});
+      s.style.color="var(--good)";s.textContent="✓ Connected. Model replied: "+r.slice(0,40);
+    }).catch(e=>{s.style.color="var(--red)";s.textContent="✗ Failed: "+e.message+". A published artifact can't reach external endpoints — open the file locally.";});
+  };
+  $("#fetchModelsBtn").onclick=()=>{
+    const s=$("#liveStatus");s.style.color="var(--muted)";s.textContent="Fetching model list…";
+    withTempCfg(async()=>{
+      const list=await fetchModels();
+      $("#modelList").innerHTML=list.map(m=>`<option value="${esc(m)}"></option>`).join("");
+      if(!$("#modelInp").value&&list.length)$("#modelInp").value=list[0];
+      s.style.color="var(--good)";s.textContent=`✓ ${list.length} model(s) — pick from the Model field.`;
+    }).catch(e=>{s.style.color="var(--red)";s.textContent="✗ Couldn't list models: "+e.message+". You can still type the model name manually.";});
+  };
+  // close overlays on backdrop click (settings only)
+  $("#settingsOverlay").addEventListener("click",e=>{if(e.target.id==="settingsOverlay")$("#settingsOverlay").classList.add("hidden");});
+
+  /* ===================== start screen ===================== */
+  let pickScen=null,pickLvl="beginner";
+  function buildStart(){
+    const grid=$("#scenGrid");grid.innerHTML="";
+    Object.entries(SCEN).forEach(([key,sc])=>{
+      const b=el("button","scen"+(sc.kind==="verify"?" flag":""));
+      b.innerHTML=`<div class="ico">${sc.icon}</div><div class="t">${esc(sc.title)}${sc.nu?'<span class="nu">New</span>':""}</div><div class="d">${esc(sc.short)}</div><div class="meta">${esc(sc.meta)}</div>`;
+      b.onclick=()=>{pickScen=key;[...grid.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");$("#beginBtn").disabled=false;};
+      grid.appendChild(b);
+    });
+    const row=$("#lvlRow");row.innerHTML="";
+    Object.entries(LEVELS).forEach(([key,lv])=>{
+      const b=el("button","lvl"+(key==="beginner"?" sel":""));
+      b.innerHTML=`<div class="t">${esc(lv.name)}<span class="lv">${lv.lv}</span></div><div class="d">${esc(lv.desc)}</div>`;
+      b.onclick=()=>{pickLvl=key;[...row.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};
+      row.appendChild(b);
+    });
+  }
+  function openStart(){pickScen=null;buildStart();$("#beginBtn").disabled=true;$("#debriefOverlay").classList.add("hidden");$("#settingsOverlay").classList.add("hidden");$("#startOverlay").classList.remove("hidden");}
+  $("#beginBtn").onclick=()=>{if(pickScen)startRun(pickScen,pickLvl);};
+
+  buildStart();refreshLiveBadge();
+  /* profile-based leak detection: assigned cover identity makes city/name checks exact */
+})();
+</script>

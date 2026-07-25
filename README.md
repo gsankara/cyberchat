@@ -4,17 +4,19 @@ Privacy-preserving training web apps that put a user across from a **simulated a
 Some scenarios train you to give away nothing; others train you to **unmask a deepfake** by
 asking the right questions.
 
-Each app is a **single self-contained HTML file** — no build, no dependencies, no network
-calls. All scoring runs client-side, so nothing you type leaves the browser.
+Each app is a **single self-contained HTML file** — no build, no dependencies. By default
+all scoring runs client-side and nothing you type leaves the browser. An optional
+[live LLM mode](docs/LLM-GATEWAY.md) can voice the adversary via your own gateway.
 
 ## Files
 
 | File | Description |
 |---|---|
-| [`counterpart-trainer.html`](counterpart-trainer.html) | **v1** — PII-fragmentation scenarios |
-| [`counterpart-trainer-v2.html`](counterpart-trainer-v2.html) | **v2** (superset) — adds deepfake defense, information-theoretic leakage, and countermeasures |
+| [`counterpart-trainer-v3.html`](counterpart-trainer-v3.html) | **v3** (current) — v2 plus a hardened client-side LLM gateway: streaming, custom headers, model discovery |
+| [`counterpart-trainer-v2.html`](counterpart-trainer-v2.html) | **v2** — deepfake defense, information-theoretic leakage, voice extortion, countermeasures |
+| [`counterpart-trainer.html`](counterpart-trainer.html) | **v1** — the original PII-fragmentation scenarios |
 
-Open either file directly in a browser.
+Open any file directly in a browser, or use the [landing page](index.html).
 
 ## Scenarios
 
@@ -74,11 +76,22 @@ in a side panel. This makes scoring exact and verifiable:
 
 ## Live adversary mode (optional)
 
-v2 can voice the adversary with a real LLM via any **OpenAI-compatible** endpoint
-(settings ⚙ → endpoint, model, key; stored only in your browser's localStorage).
-Scoring always stays deterministic and local — the model only supplies the adversary's words.
-Live mode requires opening the file locally; if a call fails it silently falls back to the
-scripted engine.
+The adversary can be voiced by a real LLM through any **OpenAI-compatible** gateway, entirely
+**client-side** — the browser POSTs directly to `<endpoint>/chat/completions`, with no server
+in between. Configure it under the settings **⚙** (endpoint, model, key, custom headers;
+stored only in your browser's `localStorage`).
+
+v3 makes it a proper gateway client:
+
+- **Streaming** replies token-by-token (SSE), with a toggle for gateways that don't support it
+- **Custom headers** for Azure (`api-key`), OpenRouter referer, org IDs, …
+- **Model discovery** — *Fetch models* lists `<endpoint>/models`
+- **Presets**: OpenAI, Anthropic, OpenRouter, Groq, Together, FABRIC AI, NRP, Ollama, LiteLLM
+
+**Scoring always stays deterministic and local** — the model only supplies the adversary's
+words. If a call fails, the scenario silently falls back to the script. Because the request is
+made from the browser, a web-hosted page (e.g. GitHub Pages) can only reach a **CORS-enabled**
+gateway; running the file locally avoids this. Full setup: **[docs/LLM-GATEWAY.md](docs/LLM-GATEWAY.md)**.
 
 ## Safety note
 
